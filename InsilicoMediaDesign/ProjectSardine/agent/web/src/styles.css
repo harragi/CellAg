@@ -590,6 +590,17 @@ body {
   padding: 3px 8px;
   border-radius: 3px;
 }
+.edit-target-file {
+  font-size: 11px;
+  font-family: ui-monospace, Menlo, monospace;
+  color: var(--accent);
+  background: white;
+  padding: 1px 8px;
+  border-radius: 3px;
+  border: 1px solid var(--accent-soft);
+  font-weight: 600;
+  flex-shrink: 0;
+}
 .edit-target {
   font-size: 12px;
   font-family: ui-monospace, Menlo, monospace;

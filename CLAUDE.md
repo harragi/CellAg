@@ -39,9 +39,9 @@ CellAg/
         └── notes.md                ← canonical project state
 ```
 
-The agent app under `ProjectSardine/agent/` is **multi-project** — it serves both Sardine and Hamster via a project-switcher in the UI. The server's project registry lives at `agent/server/src/projects.ts`; each project points at its own driver SKILL.md and notes.md.
+The agent app under `ProjectSardine/agent/` is **unified end-to-end** — one agent that always has both halves in scope (composition + validation), no project switching. The server's config lives at `agent/server/src/projects.ts`; the system prompt loads both driver SKILL.md files and both notes.md files every turn. When the agent calls `propose_notes_edit`, it specifies which file to target via the `target_file` parameter (`"sardine"` or `"hamster"`).
 
-Future projects under CellAg should follow the same shape: a project directory under a parent category, a canonical `notes.md`, and project-scoped skills under `.claude/skills/`. Add the project to `agent/server/src/projects.ts` to make it accessible in the agent UI.
+Future projects under CellAg should follow the same shape: a project directory under a parent category, a canonical `notes.md`, and project-scoped skills under `.claude/skills/`. To wire a new project into the unified agent, extend `CONFIG.notesPaths` and `CONFIG.skillPaths` in `agent/server/src/projects.ts` and add `target_file` enum values to `tools/notes.ts`.
 
 ## Conventions
 

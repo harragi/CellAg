@@ -1,7 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { runAgentTurn } from "./agent.ts";
-import { ALL_PROJECTS, DEFAULT_PROJECT, getProject, type ProjectKey } from "./projects.ts";
+import { CONFIG, type NotesTarget } from "./projects.ts";
 import { resetHistory, state, appendTurn } from "./state.ts";
 
 const PORT = Number(process.env.PORT ?? 3001);
@@ -14,13 +14,15 @@ if (!process.env.ANTHROPIC_API_KEY) {
   process.exit(1);
 }
 
-for (const p of ALL_PROJECTS) {
-  if (!existsSync(p.notesPath)) {
-    console.error(`[fatal] notes.md not found for project '${p.key}' at ${p.notesPath}`);
+for (const [target, path] of Object.entries(CONFIG.notesPaths)) {
+  if (!existsSync(path)) {
+    console.error(`[fatal] notes.md not found for target '${target}' at ${path}`);
     process.exit(1);
   }
-  if (!existsSync(p.skillPath)) {
-    console.error(`[fatal] SKILL.md not found for project '${p.key}' at ${p.skillPath}`);
+}
+for (const [target, path] of Object.entries(CONFIG.skillPaths)) {
+  if (!existsSync(path)) {
+    console.error(`[fatal] SKILL.md not found for ${target} at ${path}`);
     process.exit(1);
   }
 }
@@ -46,9 +48,8 @@ function preflight(): Response {
   return new Response(null, { status: 204, headers: corsHeaders });
 }
 
-function pickProject(input: string | null | undefined): ProjectKey {
-  const p = input && getProject(input);
-  return p ? p.key : DEFAULT_PROJECT;
+function pickTarget(input: string | null | undefined): NotesTarget {
+  return input === "hamster" ? "hamster" : "sardine";
 }
 
 const server = Bun.serve({
@@ -64,51 +65,46 @@ const server = Bun.serve({
       return json({
         ok: true,
         model: process.env.AGENT_MODEL ?? "claude-opus-4-7",
-        projects: ALL_PROJECTS.map((p) => p.key),
       });
     }
 
-    if (url.pathname === "/api/projects") {
-      // Public metadata for the UI — no internal paths.
+    if (url.pathname === "/api/config") {
       return json({
-        projects: ALL_PROJECTS.map((p) => ({
-          key: p.key,
-          displayName: p.displayName,
-          shortName: p.shortName,
-          description: p.description,
-          color: p.color,
-          examplePrompts: p.examplePrompts,
-        })),
-        default: DEFAULT_PROJECT,
+        displayName: CONFIG.displayName,
+        shortName: CONFIG.shortName,
+        description: CONFIG.description,
+        examplePrompts: CONFIG.examplePrompts,
       });
     }
 
     if (url.pathname === "/api/notes" && req.method === "GET") {
-      const project = pickProject(url.searchParams.get("project"));
-      const p = getProject(project)!;
-      const text = await readFile(p.notesPath, "utf-8");
-      const proposed = [...state.proposedEdits.values()].filter((e) => e.project === project);
-      return json({ project, notes: text, proposed });
+      // Optional ?target=sardine|hamster — default returns both.
+      const target = url.searchParams.get("target");
+      if (target) {
+        const t = pickTarget(target);
+        const text = await readFile(CONFIG.notesPaths[t], "utf-8");
+        const proposed = [...state.proposedEdits.values()].filter((e) => e.target === t);
+        return json({ target: t, notes: text, proposed });
+      }
+      const sardineText = await readFile(CONFIG.notesPaths.sardine, "utf-8");
+      const hamsterText = await readFile(CONFIG.notesPaths.hamster, "utf-8");
+      return json({
+        notes: { sardine: sardineText, hamster: hamsterText },
+        proposed: [...state.proposedEdits.values()],
+      });
     }
 
     if (url.pathname === "/api/reset" && req.method === "POST") {
-      const body = (await req.json().catch(() => ({}))) as { project?: string };
-      const project = pickProject(body.project);
-      resetHistory(project);
-      // Drop any staged edits for this project.
-      for (const [id, e] of state.proposedEdits) {
-        if (e.project === project) state.proposedEdits.delete(id);
-      }
-      return json({ ok: true, project });
+      resetHistory();
+      state.proposedEdits.clear();
+      return json({ ok: true });
     }
 
     if (url.pathname === "/api/notes/apply" && req.method === "POST") {
       const body = (await req.json().catch(() => ({}))) as { editId?: string };
       const edit = body.editId ? state.proposedEdits.get(body.editId) : undefined;
       if (!edit) return json({ ok: false, reason: "edit not found" }, { status: 404 });
-      const project = getProject(edit.project)!;
-      // MVP: append rather than section-replace. Captures the agent's intended
-      // target and rationale alongside the new content for later manual merge.
+      const path = CONFIG.notesPaths[edit.target];
       const timestamp = new Date().toISOString().slice(0, 10);
       const stampedBlock = [
         "",
@@ -120,21 +116,19 @@ const server = Bun.serve({
         edit.newContent,
         "",
       ].join("\n");
-      const current = await readFile(project.notesPath, "utf-8");
-      await writeFile(project.notesPath, current.trimEnd() + "\n" + stampedBlock + "\n", "utf-8");
+      const current = await readFile(path, "utf-8");
+      await writeFile(path, current.trimEnd() + "\n" + stampedBlock + "\n", "utf-8");
       state.proposedEdits.delete(edit.id);
-      return json({ ok: true, project: edit.project });
+      return json({ ok: true, target: edit.target });
     }
 
     if (url.pathname === "/api/notes/reject" && req.method === "POST") {
       const body = (await req.json().catch(() => ({}))) as { editId?: string };
       const edit = body.editId ? state.proposedEdits.get(body.editId) : undefined;
       if (edit) {
-        // Inject a system note into the right project's history so the agent
-        // sees the rejection on its next turn.
-        appendTurn(edit.project, {
+        appendTurn({
           role: "user",
-          content: `(System note: the user rejected proposed edit ${edit.id}. Do not retry the same change.)`,
+          content: `(System note: the user rejected proposed edit ${edit.id} on target_file '${edit.target}'. Do not retry the same change.)`,
         });
         state.proposedEdits.delete(edit.id);
       }
@@ -142,11 +136,10 @@ const server = Bun.serve({
     }
 
     if (url.pathname === "/api/chat" && req.method === "POST") {
-      const body = (await req.json().catch(() => ({}))) as { message?: string; project?: string };
+      const body = (await req.json().catch(() => ({}))) as { message?: string };
       const message = (body.message ?? "").trim();
       if (!message) return json({ ok: false, reason: "empty message" }, { status: 400 });
-      const project = pickProject(body.project);
-      return runChatSse(project, message);
+      return runChatSse(message);
     }
 
     return json({ ok: false, reason: "not found", path: url.pathname }, { status: 404 });
@@ -159,10 +152,12 @@ const server = Bun.serve({
 
 console.log(
   `[cellag-agent] listening on http://localhost:${server.port}\n` +
-    ALL_PROJECTS.map((p) => `  ${p.key.padEnd(8)} → ${p.notesPath}`).join("\n")
+    Object.entries(CONFIG.notesPaths)
+      .map(([k, p]) => `  notes.${k.padEnd(7)} → ${p}`)
+      .join("\n")
 );
 
-function runChatSse(project: ProjectKey, userMessage: string): Response {
+function runChatSse(userMessage: string): Response {
   const stream = new ReadableStream({
     async start(controller) {
       const encoder = new TextEncoder();
@@ -182,7 +177,7 @@ function runChatSse(project: ProjectKey, userMessage: string): Response {
         }
       }, 15_000);
       try {
-        await runAgentTurn(project, userMessage, push);
+        await runAgentTurn(userMessage, push);
       } catch (err) {
         push("error", { reason: err instanceof Error ? err.message : String(err) });
       } finally {

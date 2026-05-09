@@ -8,13 +8,12 @@ import { buildCaailTool } from "./caail.ts";
 import { buildBiggTool } from "./bigg.ts";
 import { buildChebiTool } from "./chebi.ts";
 import { buildYieldsTool } from "./yields.ts";
-import type { ProjectKey } from "../projects.ts";
 
 export type NotifyClient = (event: string, data: unknown) => void;
 
-export function buildScienceMcpServer(projectKey: ProjectKey, notify: NotifyClient) {
+export function buildScienceMcpServer(notify: NotifyClient) {
   const tools = [
-    ...buildNotesTools(projectKey, notify),
+    ...buildNotesTools(notify),
     buildKeggTool(),
     buildEnsemblTool(),
     buildEuropePmcTool(),
@@ -26,7 +25,7 @@ export function buildScienceMcpServer(projectKey: ProjectKey, notify: NotifyClie
   ];
   return createSdkMcpServer({
     name: "science",
-    version: "0.2.0",
+    version: "0.3.0",
     tools,
   });
 }

@@ -2,30 +2,23 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import { buildSystemPrompt } from "./system-prompt.ts";
 import { buildScienceMcpServer, SCIENCE_TOOL_GLOB, type NotifyClient } from "./tools/index.ts";
 import { appendTurn } from "./state.ts";
-import type { ProjectKey } from "./projects.ts";
 
 const MODEL = process.env.AGENT_MODEL ?? "claude-opus-4-7";
 
 export type SsePush = (event: string, data: unknown) => void;
 
 /**
- * Run one turn of the agent for a given project. Pushes SDK message events
- * to the SSE stream as they arrive; appends assistant text to per-project
- * history; resolves when the agent's turn ends.
+ * Run one turn of the unified agent. Pushes SDK message events to the SSE
+ * stream as they arrive; appends assistant text to history.
  */
-export async function runAgentTurn(
-  projectKey: ProjectKey,
-  userMessage: string,
-  push: SsePush
-): Promise<void> {
-  appendTurn(projectKey, { role: "user", content: userMessage });
+export async function runAgentTurn(userMessage: string, push: SsePush): Promise<void> {
+  appendTurn({ role: "user", content: userMessage });
 
-  const systemPrompt = await buildSystemPrompt(projectKey);
-
+  const systemPrompt = await buildSystemPrompt();
   const notify: NotifyClient = (event, data) => push(event, data);
-  const science = buildScienceMcpServer(projectKey, notify);
+  const science = buildScienceMcpServer(notify);
 
-  push("system", { kind: "turn_start", model: MODEL, project: projectKey });
+  push("system", { kind: "turn_start", model: MODEL });
 
   let assistantText = "";
 
@@ -38,7 +31,7 @@ export async function runAgentTurn(
         mcpServers: { science },
         allowedTools: [SCIENCE_TOOL_GLOB],
         permissionMode: "bypassPermissions",
-        maxTurns: 16,
+        maxTurns: 20,
       },
     });
 
@@ -54,7 +47,7 @@ export async function runAgentTurn(
   }
 
   if (assistantText) {
-    appendTurn(projectKey, { role: "assistant", content: assistantText });
+    appendTurn({ role: "assistant", content: assistantText });
   }
   push("system", { kind: "turn_end" });
 }

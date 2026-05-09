@@ -1,6 +1,6 @@
 import { useEffect, useImperativeHandle, useRef, useState, forwardRef } from "react";
 import type { ProposedEdit } from "../App.tsx";
-import type { Project } from "../lib/projects.ts";
+import type { ExamplePrompt } from "../lib/config.ts";
 import { streamSse, type SseEvent } from "../lib/stream.ts";
 import { MarkdownView } from "./MarkdownView.tsx";
 import { ToolCard, type ToolCall } from "./ToolCard.tsx";
@@ -21,7 +21,8 @@ export type ChatHandle = {
 };
 
 type Props = {
-  project: Project | null;
+  examplePrompts: ExamplePrompt[];
+  description: string;
   pendingEdits: ProposedEdit[];
   toolCalls: ToolCall[];
   onProposedEdit: (e: ProposedEdit) => void;
@@ -33,7 +34,8 @@ type Props = {
 
 export const Chat = forwardRef<ChatHandle, Props>(function Chat(
   {
-    project,
+    examplePrompts,
+    description,
     pendingEdits,
     toolCalls,
     onProposedEdit,
@@ -59,7 +61,7 @@ export const Chat = forwardRef<ChatHandle, Props>(function Chat(
   }));
 
   async function sendMessage(text: string) {
-    if (!text.trim() || busy || !project) return;
+    if (!text.trim() || busy) return;
     setInput("");
     setBusy(true);
     onStatusChange("running");
@@ -70,13 +72,9 @@ export const Chat = forwardRef<ChatHandle, Props>(function Chat(
     ]);
 
     try {
-      await streamSse(
-        "/api/chat",
-        { message: text, project: project.key },
-        (ev: SseEvent) => {
-          handleEvent(ev, setItems, onProposedEdit, onToolCall, onToolResult);
-        }
-      );
+      await streamSse("/api/chat", { message: text }, (ev: SseEvent) => {
+        handleEvent(ev, setItems, onProposedEdit, onToolCall, onToolResult);
+      });
       onStatusChange("idle");
     } catch (err) {
       setItems((prev) => [
@@ -126,7 +124,11 @@ export const Chat = forwardRef<ChatHandle, Props>(function Chat(
     <div className="chat-pane">
       <div className="chat-list" ref={listRef}>
         {items.length === 0 ? (
-          <Welcome project={project} onPick={(prompt) => setInput(prompt)} />
+          <Welcome
+            examplePrompts={examplePrompts}
+            description={description}
+            onPick={(prompt) => setInput(prompt)}
+          />
         ) : (
           items.map((it, i) => (
             <Item
@@ -151,11 +153,7 @@ export const Chat = forwardRef<ChatHandle, Props>(function Chat(
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={
-                project
-                  ? `Ask the ${project.shortName} agent — try a suggested prompt above`
-                  : "Ask the agent…"
-              }
+              placeholder="Ask the agent — try one of the suggested prompts above"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                   e.preventDefault();

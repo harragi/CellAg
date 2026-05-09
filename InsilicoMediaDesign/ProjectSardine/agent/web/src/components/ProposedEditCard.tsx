@@ -17,6 +17,7 @@ export function ProposedEditCard({
     <div className={`edit-card${resolved ? " resolved" : ""}`}>
       <div className="edit-card-head">
         <span className="edit-tag">{resolved ? resolution : "proposed edit"}</span>
+        <span className="edit-target-file">→ {edit.target}/notes.md</span>
         <span className="edit-target" title={edit.section}>{edit.section}</span>
       </div>
       <div className="edit-card-body">

@@ -50,40 +50,42 @@ CellAg/
 │           ├── server/             Bun + TypeScript + Claude Agent SDK
 │           │   └── src/tools/      10 custom tools
 │           └── web/                React + Vite + react-markdown
-│               └── src/components/ chat, steps rail, project switcher, propose-edit UI
-└── MediaValidation/                category: media validation (NEW)
+│               └── src/components/ chat, steps rail, propose-edit UI
+└── MediaValidation/                category: media validation
     └── ProjectHamster/             CHO validation effort
         ├── notes.md                canonical state
         └── README.md
 ```
 
-## Two projects in flight
+## One agent, two halves of the loop
 
-| | **Project Sardine** | **Project Hamster** |
+The agent is **unified** — it operates end-to-end across composition and validation, with no project switching. It loads both notes files and both driver skills as context every turn. When it proposes an edit, it picks which `notes.md` to target.
+
+| | **Composition (Sardine framework)** | **Validation (Hamster framework)** |
 |---|---|---|
-| **Cell type** | Fish (rainbow trout target) | CHO (Chinese hamster ovary) |
 | **Question** | What's *in* a media that keeps cells alive? | Is this media *valid* against what the cell can metabolically do? |
-| **Method** | Composition design + system-knowledge-driven ingredient choice | GSM (iCHO family) + metabolic readouts (q_Glc, q_Lac, μ, Y_Lac/Glc) |
-| **Output** | A formulation | A validation report (predicted vs. measured, discrepancy modes) |
-| **Skills** | `project-sardine`, `sardine-start-with`, `sardine-thrive` | `project-hamster`, `hamster-validate`, `hamster-metabolic-model` |
+| **Cell-type focus** | Fish (rainbow trout target) — but framework is general | CHO (Chinese hamster ovary) — model-anchored |
+| **Method** | Three-category design (basal + growth factors + often-ignored) + system-knowledge axis | iCHO genome-scale models + metabolic readouts (q_Glc, q_Lac, μ, Y_Lac/Glc) |
+| **Output** | A formulation | A validation report with predicted vs. measured |
+| **Skills** | `sardine-start-with`, `sardine-thrive` | `hamster-validate`, `hamster-metabolic-model` |
 | **State** | `InsilicoMediaDesign/ProjectSardine/notes.md` | `MediaValidation/ProjectHamster/notes.md` |
 
-Each project has its own canonical `notes.md` and its own driver skill. The agent treats notes as the source of truth — reads on every turn, proposes section edits inline. **Nothing reaches disk without a click.**
+For end-to-end queries (e.g., *"design a CHO media and validate it"*), the agent uses both halves in one conversation. The agent treats notes as the source of truth — reads on every turn, proposes section edits inline. **Nothing reaches disk without a click.**
 
 ## How the agent works
 
 ```
 Browser (React + Vite, port 5173)
-   │   POST /api/chat   { message, project: "sardine" | "hamster" }
+   │   POST /api/chat   { message }
    │   ◄ SSE stream of SDK message events
    ▼
 Bun + TypeScript server (port 3001)
    │   uses @anthropic-ai/claude-agent-sdk
    │   query() loop with 10 custom tools (in-process MCP server)
-   │   project registry → per-project SKILL.md + notes.md
+   │   system prompt = both SKILL.md files + both notes.md files (always)
    ▼
 Custom tools
-   ├─ read_notes / propose_notes_edit  (per-project notes.md, propose-only)
+   ├─ read_notes / propose_notes_edit  (target_file: sardine | hamster)
    ├─ query_kegg                       (rest.kegg.jp)            metabolism
    ├─ query_ensembl                    (rest.ensembl.org)        signaling
    ├─ search_europepmc                 (ebi.ac.uk/europepmc)     literature
