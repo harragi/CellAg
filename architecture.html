@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CellAg — Architecture Overview</title>
+<style>
+  :root {
+    --bg: #fbfaf7;
+    --panel: #ffffff;
+    --panel-soft: #f3f0e8;
+    --line: #d6d2c5;
+    --line-soft: #e8e4d8;
+    --fg: #1a1a1a;
+    --muted: #5a5a5a;
+    --muted-soft: #8a8a8a;
+
+    --accent: #8a3324;
+    --accent-deep: #6b271c;
+    --accent-soft: #f3e7e1;
+
+    /* Tool family palette — must match the UI's --t-* slots */
+    --t-kegg: #3f7d3f;        --t-kegg-soft: #e3eee3;
+    --t-ensembl: #2c5fa0;     --t-ensembl-soft: #dde7f1;
+    --t-europepmc: #6c3a8a;   --t-europepmc-soft: #ece3f2;
+    --t-arxiv: #b85b1a;       --t-arxiv-soft: #f7e6d6;
+    --t-caail: #8a6f3a;       --t-caail-soft: #f1e9d4;
+    --t-notes: #5a5a5a;       --t-notes-soft: #e6e4dd;
+    --t-edit: #8a3324;        --t-edit-soft: #f3e7e1;
+    --t-bigg: #1f6f7a;        --t-bigg-soft: #d6e9ec;
+    --t-chebi: #5d4a8a;       --t-chebi-soft: #e6e0f1;
+    --t-yields: #a8324a;      --t-yields-soft: #f4dde3;
+    --t-uniprot: #c45b1a;     --t-uniprot-soft: #f5e1d0;
+    --t-reactome: #4a7a3e;    --t-reactome-soft: #e3edd9;
+    --t-tu: #4a4a6a;          --t-tu-soft: #e3e3ec;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: "Charter", "Iowan Old Style", Georgia, serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .layout { display: grid; grid-template-columns: 240px minmax(0,1fr); gap: 48px; max-width: 1240px; margin: 0 auto; padding: 32px 24px; }
+  nav.toc {
+    position: sticky; top: 24px; align-self: start;
+    font-size: 13px; line-height: 1.5;
+    border-right: 1px solid var(--line);
+    padding-right: 16px;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+  }
+  nav.toc h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 12px; font-family: ui-sans-serif, system-ui, sans-serif; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; counter-reset: section; }
+  nav.toc li { counter-increment: section; margin-bottom: 6px; }
+  nav.toc li::before { content: counter(section) ". "; color: var(--muted); }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  main { min-width: 0; max-width: 920px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 8px; letter-spacing: -0.01em; }
+  h2 { font-size: 24px; margin: 56px 0 12px; padding-top: 12px; border-top: 1px solid var(--line); letter-spacing: -0.005em; }
+  h3 { font-size: 18px; margin: 28px 0 8px; color: var(--accent); }
+  h4 { font-size: 13px; margin: 18px 0 4px; font-family: ui-sans-serif, system-ui, sans-serif; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  p, ul, ol { margin: 0 0 14px; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 4px; }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  code { background: var(--panel-soft); padding: 1px 5px; border-radius: 3px; font-size: 0.88em; font-family: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace; }
+  pre { background: var(--panel-soft); padding: 14px 16px; border-radius: 6px; overflow-x: auto; font-size: 13px; line-height: 1.55; border: 1px solid var(--line-soft); }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 3px solid var(--accent); margin: 14px 0; padding: 4px 16px; color: var(--muted); background: var(--accent-soft); border-radius: 0 4px 4px 0; }
+  blockquote p:last-child { margin-bottom: 0; }
+  .lede { font-size: 18px; color: var(--muted); margin: 0 0 32px; }
+  .meta { font-size: 13px; color: var(--muted); font-family: ui-sans-serif, system-ui, sans-serif; margin-bottom: 32px; }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 600; }
+
+  /* ====== Architecture diagram ====== */
+  .arch {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 24px;
+    margin: 18px 0 30px;
+  }
+  .arch-row { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; align-items: stretch; margin: 10px 0; }
+  .arch-row.three > * { flex: 1 1 0; min-width: 200px; }
+  .arch-row.two > * { flex: 1 1 0; min-width: 220px; }
+  .arch-row.center { justify-content: center; }
+
+  .node {
+    background: var(--panel);
+    border: 2px solid var(--line);
+    border-radius: 7px;
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 14px;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    line-height: 1.5;
+  }
+  .node h4 { margin: 0 0 4px; font-size: 14px; color: inherit; text-transform: none; letter-spacing: 0; font-weight: 700; }
+  .node .sub { font-size: 12px; color: var(--muted); }
+  .node ul { margin: 6px 0 0; padding-left: 18px; font-size: 12px; }
+  .node li { margin-bottom: 2px; line-height: 1.4; }
+
+  .node.client { border-color: var(--accent); background: var(--accent-soft); }
+  .node.server { border-color: var(--muted); background: var(--panel-soft); }
+  .node.mcp-science { border-color: var(--t-edit); background: var(--t-edit-soft); }
+  .node.mcp-tu { border-color: var(--t-tu); background: var(--t-tu-soft); }
+  .node.notes-store { border-color: var(--accent); background: var(--accent-soft); }
+  .node.skills-store { border-color: var(--muted); background: var(--panel-soft); }
+  .node.local-data { border-color: var(--t-caail); background: var(--t-caail-soft); }
+  .node.external { border-color: var(--t-ensembl); background: var(--t-ensembl-soft); }
+  .node.calc { border-color: var(--t-yields); background: var(--t-yields-soft); }
+
+  .arrow {
+    text-align: center;
+    color: var(--muted);
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 12px;
+    margin: 6px 0;
+  }
+  .arrow .label { background: var(--bg); padding: 0 8px; }
+  .arrow svg { display: block; margin: 0 auto; }
+
+  /* Tool catalog grid */
+  .families { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin: 18px 0; }
+  .family {
+    border: 1px solid var(--c-soft);
+    border-radius: 8px;
+    background: var(--c-soft);
+    padding: 12px 14px;
+  }
+  .family h4 {
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--c);
+    margin: 0 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .family h4 .badge {
+    width: 22px; height: 22px;
+    background: var(--c);
+    color: white;
+    border-radius: 4px;
+    display: inline-grid;
+    place-items: center;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: ui-monospace, Menlo, monospace;
+  }
+  .family .blurb { font-size: 11px; color: var(--muted); margin-bottom: 8px; line-height: 1.45; }
+  .family ul { margin: 0; padding-left: 0; list-style: none; font-size: 12px; }
+  .family li {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    color: var(--fg);
+    padding: 2px 0;
+    margin-bottom: 0;
+    line-height: 1.45;
+  }
+  .family li.our::before { content: "● "; color: var(--c); }
+  .family li.tu::before { content: "○ "; color: var(--c); }
+  .family li.kept::before { content: "◆ "; color: var(--accent); }
+  .family-legend { font-size: 11px; color: var(--muted); display: flex; gap: 18px; margin: 8px 0 24px; font-family: ui-sans-serif, system-ui, sans-serif; }
+  .family-legend span { display: inline-flex; align-items: center; gap: 4px; }
+
+  /* Sequence diagram */
+  .seq {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 22px 24px;
+    margin: 18px 0;
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    overflow-x: auto;
+  }
+  .seq-step {
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    gap: 14px;
+    padding: 6px 0;
+    align-items: start;
+  }
+  .seq-step .num {
+    font-weight: 700;
+    color: var(--accent);
+    text-align: right;
+  }
+  .seq-step .body { color: var(--fg); }
+  .seq-step .body .what { font-weight: 600; }
+  .seq-step .body .detail { color: var(--muted); font-size: 11px; }
+  .seq-divider {
+    margin: 8px 0 8px 78px;
+    border-top: 1px dashed var(--line-soft);
+  }
+
+  /* Callouts */
+  .callout {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin: 18px 0;
+    background: var(--panel);
+  }
+  .callout-title {
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+
+  hr { border: none; border-top: 1px dashed var(--line); margin: 36px 0; }
+  .footer { color: var(--muted); font-size: 13px; margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--line); }
+  .pill {
+    display: inline-block;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 11px;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: 0.03em;
+    margin-right: 4px;
+  }
+  @media (max-width: 850px) {
+    .layout { grid-template-columns: 1fr; gap: 0; padding: 24px 18px; }
+    nav.toc { position: static; border: none; border-bottom: 1px solid var(--line); padding-bottom: 16px; padding-right: 0; max-height: none; margin-bottom: 24px; }
+    .arch-row { flex-direction: column; }
+    .arch-row > * { min-width: 0 !important; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="Table of contents">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#tldr">TL;DR</a></li>
+    <li><a href="#facts">60-second view</a></li>
+    <li><a href="#arch">System architecture</a></li>
+    <li><a href="#layers">Layered view</a></li>
+    <li><a href="#tools">Tool catalog</a></li>
+    <li><a href="#lifecycle">Request lifecycle</a></li>
+    <li><a href="#propose">Propose-then-apply flow</a></li>
+    <li><a href="#skills">Skills layer</a></li>
+    <li><a href="#data">External services</a></li>
+    <li><a href="#run">How to run</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<h1>CellAg — Architecture Overview</h1>
+<p class="lede">An end-to-end agent for cellular-agriculture media work. One conversation, one canonical state, two scientific-domain frameworks (composition + validation), 50 tools across two MCP servers.</p>
+<p class="meta"><a href="https://github.com/harragi/CellAg">github.com/harragi/CellAg</a> · MIT · written for the team to skim before sitting down at the running app.</p>
+
+<section id="tldr">
+<h2>TL;DR</h2>
+<p>The CellAg agent takes a natural-language query — typically <em>"design a media for X cell type and validate it against Y"</em> — and runs it through a <strong>design → validate</strong> loop end-to-end, in a single conversation. Two markdown notes files act as canonical project state. The agent reads them every turn, calls scientific-database tools to ground its reasoning, and proposes structured section edits the user reviews inline before they hit disk.</p>
+<p>The agent runs locally: a Bun + TypeScript backend on port 3001, a React + Vite UI on port 5173, both kicked off with <code>bun run dev</code>. It uses the <a href="https://docs.claude.com/en/docs/agents-and-tools/agent-sdk">Claude Agent SDK</a> for the model loop and exposes its own custom tool set via an in-process MCP server, plus a curated subset of <a href="https://github.com/mims-harvard/ToolUniverse">ToolUniverse</a>'s 2,200-tool catalog via a second stdio MCP server. The user sees streaming text, color-coded tool cards, a step timeline on the left, and inline propose-edit cards in the chat.</p>
+</section>
+
+<section id="facts">
+<h2>60-second view</h2>
+<table>
+  <tbody>
+    <tr><th>Surface</th><td>One web UI at <code>localhost:5173</code> — chat pane, steps rail, propose-edit cards. No project switcher; the agent always has both halves of the loop in scope.</td></tr>
+    <tr><th>Backend</th><td>Bun + TypeScript on port 3001. Single SSE endpoint <code>POST /api/chat</code> streams the SDK's message events to the UI.</td></tr>
+    <tr><th>Agent SDK</th><td><code>@anthropic-ai/claude-agent-sdk</code> v0.2.138. Model: Claude Opus 4.7. <code>maxTurns: 24</code>, <code>permissionMode: "bypassPermissions"</code>.</td></tr>
+    <tr><th>Tools</th><td><strong>10 custom</strong> (in-process MCP server "science") + <strong>40 curated TU tools</strong> (stdio MCP server "tooluniverse"). Wildcard <code>mcp__science__*</code> + explicit allowlist for TU.</td></tr>
+    <tr><th>State</th><td>Two markdown files: <code>InsilicoMediaDesign/ProjectSardine/notes.md</code> (composition, fish-focused) and <code>MediaValidation/ProjectHamster/notes.md</code> (validation, CHO-focused). Both inlined into the system prompt every turn.</td></tr>
+    <tr><th>Skills</th><td>Six Claude Code skills under <code>.claude/skills/</code>. The two driver skills (<code>sardine-start-with</code>, <code>hamster-validate</code>) are loaded verbatim into the agent's system prompt.</td></tr>
+    <tr><th>Persistence</th><td>Edits are append-only to notes.md when the user clicks Apply (date-stamped block with rationale). Conversation history is in-memory; reset per session.</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="arch">
+<h2>System architecture</h2>
+<p>Five tiers, top to bottom:</p>
+
+<div class="arch">
+  <div class="arch-row center">
+    <div class="node client" style="max-width: 520px;">
+      <h4>Browser — React + Vite (port 5173)</h4>
+      <div class="sub">Chat pane · Steps rail · Inline propose-edit cards</div>
+      <ul>
+        <li>SSE consumer parses each <code>SDKMessage</code> event</li>
+        <li>Tool cards color-coded by family (KEGG green, BiGG teal, …)</li>
+        <li>Apply / Reject buttons → POST <code>/api/notes/apply</code> · <code>/reject</code></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="arrow">
+    <svg width="14" height="22"><polyline points="7,0 7,16" fill="none" stroke="currentColor" stroke-width="1.5" /><polygon points="3,14 11,14 7,22" fill="currentColor" /></svg>
+    <span class="label">POST /api/chat &nbsp;◀&nbsp; SSE stream of message events</span>
+  </div>
+
+  <div class="arch-row center">
+    <div class="node server" style="max-width: 720px;">
+      <h4>Bun + TypeScript server (port 3001)</h4>
+      <div class="sub">Single chat endpoint; in-memory state for history + staged edits</div>
+      <ul>
+        <li><code>system-prompt.ts</code> assembles: project preamble + both SKILL.md + both notes.md + tool catalog + session history</li>
+        <li><code>agent.ts</code> calls <code>query(...)</code> and pumps each event onto the SSE stream</li>
+        <li><code>tools/notes.ts</code> stages edits (no disk write); <code>/api/notes/apply</code> commits them</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="arrow">
+    <svg width="14" height="22"><polyline points="7,0 7,16" fill="none" stroke="currentColor" stroke-width="1.5" /><polygon points="3,14 11,14 7,22" fill="currentColor" /></svg>
+    <span class="label">Claude Agent SDK <code>query()</code> loop · <code>mcpServers: { science, tooluniverse }</code></span>
+  </div>
+
+  <div class="arch-row two">
+    <div class="node mcp-science">
+      <h4>MCP server: science</h4>
+      <div class="sub">In-process · created via <code>createSdkMcpServer()</code> · 10 tools</div>
+      <ul>
+        <li>read_notes / propose_notes_edit (target_file: sardine | hamster)</li>
+        <li>query_kegg / query_ensembl / query_bigg / query_chebi (generic fallbacks)</li>
+        <li>search_europepmc / arxiv_search</li>
+        <li>search_caail (local grep)</li>
+        <li>compute_metabolic_yields (calculator)</li>
+      </ul>
+    </div>
+    <div class="node mcp-tu">
+      <h4>MCP server: tooluniverse</h4>
+      <div class="sub">Stdio subprocess · <code>tooluniverse-smcp-stdio</code> · 40 of 2,214 allowlisted</div>
+      <ul>
+        <li>KEGG: 11 named tools (get_compound, get_pathway_genes, …)</li>
+        <li>BiGG: 5 named tools (get_model, get_reaction, …)</li>
+        <li>UniProt: 5 (function, sequence, subcellular_location, …)</li>
+        <li>Reactome: 2 · MetaboAnalyst: 2 · ChEBI/Rhea: 4</li>
+        <li>PubMed: 4 · ArXiv/BioRxiv: 3 · Ensembl: 2 · HPA · GlyGen · CELLxGENE</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="arrow">
+    <svg width="14" height="22"><polyline points="7,0 7,16" fill="none" stroke="currentColor" stroke-width="1.5" /><polygon points="3,14 11,14 7,22" fill="currentColor" /></svg>
+    <span class="label">Tool handlers fetch from local files or external REST APIs</span>
+  </div>
+
+  <div class="arch-row three">
+    <div class="node notes-store">
+      <h4>Local state: notes.md ×2</h4>
+      <div class="sub">Canonical project state; inlined into system prompt</div>
+      <ul>
+        <li>InsilicoMediaDesign/ProjectSardine/notes.md (composition, fish target)</li>
+        <li>MediaValidation/ProjectHamster/notes.md (CHO validation)</li>
+      </ul>
+    </div>
+    <div class="node local-data">
+      <h4>Local data: caail bibliography</h4>
+      <div class="sub">Optional clone — graceful "clone first" fallback if missing</div>
+      <ul>
+        <li>~/Code/tucca/caail/Papers.md (37 references)</li>
+        <li>regex grep via <code>search_caail</code></li>
+      </ul>
+    </div>
+    <div class="node calc">
+      <h4>Pure calculator</h4>
+      <div class="sub">No I/O · CHO industry units</div>
+      <ul>
+        <li>Two time-course points → μ, t_d, q_X, Y_Lac/Glc</li>
+        <li>Headline diagnostic: Y_Lac/Glc</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="arch-row center">
+    <div class="node external" style="max-width: 720px;">
+      <h4>External REST APIs (~12 distinct sources)</h4>
+      <div class="sub">All unauthenticated for our queries; some endpoints accept optional API keys for higher rate limits</div>
+      <ul>
+        <li>NCBI E-utilities · KEGG · Ensembl · BiGG · ChEBI / OLS · EuropePMC · arXiv · UniProt · Reactome · MetaboAnalyst · GlyGen · HPA · CELLxGENE</li>
+      </ul>
+    </div>
+  </div>
+</div>
+</section>
+
+<section id="layers">
+<h2>Layered view</h2>
+<p>Reading the same architecture by responsibility:</p>
+
+<table>
+  <thead><tr><th>Layer</th><th>What lives here</th><th>Code path</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Presentation</strong></td>
+      <td>Streaming chat UI, color-coded tool cards, steps rail, propose-edit cards with apply/reject, markdown rendering for assistant messages</td>
+      <td><code>agent/web/src/{App,components/*,lib/stream}.tsx</code></td>
+    </tr>
+    <tr>
+      <td><strong>Transport</strong></td>
+      <td>SSE chat endpoint, REST endpoints for notes / apply / reject / reset, 15s keepalive comments to prevent Bun idleTimeout</td>
+      <td><code>agent/server/src/index.ts</code></td>
+    </tr>
+    <tr>
+      <td><strong>Orchestration</strong></td>
+      <td>Agent SDK <code>query()</code> loop, system-prompt assembly, message extraction, history append</td>
+      <td><code>agent/server/src/{agent,system-prompt,state}.ts</code></td>
+    </tr>
+    <tr>
+      <td><strong>Tools (in-process)</strong></td>
+      <td>10 custom tool handlers, each a Zod-validated function. Notes tool routes to the correct file via <code>target_file</code> enum.</td>
+      <td><code>agent/server/src/tools/*.ts</code></td>
+    </tr>
+    <tr>
+      <td><strong>Tools (subprocess)</strong></td>
+      <td>ToolUniverse stdio MCP server (Python). 40 tools allowlisted via <code>tu-allowlist.ts</code>.</td>
+      <td><code>tooluniverse-smcp-stdio</code> binary (uv-installed)</td>
+    </tr>
+    <tr>
+      <td><strong>State</strong></td>
+      <td>Two canonical markdown files; conversation history kept in-memory; staged edits in a <code>Map&lt;id, ProposedEdit&gt;</code></td>
+      <td><code>InsilicoMediaDesign/.../notes.md</code> · <code>MediaValidation/.../notes.md</code></td>
+    </tr>
+    <tr>
+      <td><strong>Knowledge</strong></td>
+      <td>Six Claude Code skills under <code>.claude/skills/</code> — the two driver skills are loaded into the system prompt; the four router/sub-skills are available to Claude Code sessions in the workspace</td>
+      <td><code>.claude/skills/{project-,sardine-,hamster-}*</code></td>
+    </tr>
+  </tbody>
+</table>
+</section>
+
+<section id="tools">
+<h2>Tool catalog</h2>
+<p>50 tools organized by family. <span class="pill">●</span> custom (this repo) · <span class="pill" style="background:var(--t-tu-soft); color:var(--t-tu);">○</span> ToolUniverse · <span class="pill" style="background:var(--accent-soft); color:var(--accent);">◆</span> kept (no TU equivalent — local file or pure calc).</p>
+
+<div class="families">
+  <div class="family" style="--c:var(--t-kegg); --c-soft:var(--t-kegg-soft);">
+    <h4><span class="badge">KG</span> KEGG</h4>
+    <div class="blurb">Metabolic pathways. CHO organism code <code>cge</code>.</div>
+    <ul>
+      <li class="our">query_kegg</li>
+      <li class="tu">kegg_search_pathway</li>
+      <li class="tu">kegg_get_pathway_info</li>
+      <li class="tu">kegg_find_genes</li>
+      <li class="tu">kegg_get_gene_info</li>
+      <li class="tu">kegg_list_organisms</li>
+      <li class="tu">KEGG_get_compound</li>
+      <li class="tu">KEGG_get_gene_pathways</li>
+      <li class="tu">KEGG_get_pathway_genes</li>
+      <li class="tu">KEGG_link_entries</li>
+      <li class="tu">KEGG_search_network</li>
+      <li class="tu">KEGG_get_network</li>
+    </ul>
+  </div>
+
+  <div class="family" style="--c:var(--t-ensembl); --c-soft:var(--t-ensembl-soft);">
+    <h4><span class="badge">EN</span> Ensembl</h4>
+    <div class="blurb">Genome / receptor lookups. CHO species: <code>cricetulus_griseus_chok1gshd</code>.</div>
+    <ul>
+      <li class="our">query_ensembl</li>
+      <li class="tu">ensembl_lookup_gene</li>
+      <li class="tu">ensembl_get_sequence</li>
+    </ul>
+  </div>
+
+  <div class="family" style="--c:var(--t-europepmc); --c-soft:var(--t-europepmc-soft);">
+    <h4><span class="badge">PM</span> Literature: PubMed / EuropePMC</h4>
+    <div class="blurb">Biomedical literature with citation graph (related, cited-by).</div>
+    <ul>
+      <li class="our">search_europepmc</li>
+      <li class="tu">PubMed_search_articles</li>
+      <li class="tu">PubMed_get_article</li>
+      <li class="tu">PubMed_get_related</li>
+      <li class="tu">PubMed_get_cited_by</li>
+    </ul>
+  </div>
+
+  <div class="family" style="--c:var(--t-arxiv); --c-soft:var(--t-arxiv-soft);">
+    <h4><span class="badge">AX</span> Preprints: arXiv / bioRxiv</h4>
+    <div class="blurb">bioRxiv often more relevant than arXiv for this domain.</div>
+    <ul>
+      <li class="our">arxiv_search</li>
+      <li class="tu">ArXiv_search_papers</li>
+      <li class="tu">ArXiv_get_pdf_snippets</li>
+      <li class="tu">BioRxiv_list_recent_preprints</li>
+    </ul>
+  </div>
+
+  <div class="family" style="--c:var(--t-bigg); --c-soft:var(--t-bigg-soft);">
+    <h4><span class="badge">BG</span> BiGG &amp; GlyGen</h4>
+    <div class="blurb">Genome-scale models (iCHO family) and CHO mAb glycosylation.</div>
+    <ul>
+      <li class="our">query_bigg</li>
+      <li class="tu">BiGG_list_models</li>
+      <li class="tu">BiGG_get_model</li>
+      <li class="tu">BiGG_get_reaction</li>
+      <li class="tu">BiGG_get_metabolite</li>
+      <li class="tu">BiGG_search</li>
+      <li class="tu">GlyGen_get_glycan</li>
+    </ul>
+  </div>
+
+  <div class="family" style="--c:var(--t-chebi); --c-soft:var(--t-chebi-soft);">
+    <h4><span class="badge">CB</span> ChEBI &amp; Rhea</h4>
+    <div class="blurb">Compound IDs and biochemical reactions.</div>
+    <ul>
+      <li class="our">query_chebi</li>
+      <li class="tu">ChEBI_search</li>
+      <li class="tu">ChEBI_get_compound</li>
+      <li class="tu">ChEBI_get_ontology_children</li>
+      <li class="tu">Rhea_search_by_chebi</li>
+    </ul>
+  </div>
+
+  <div class="family" style="--c:var(--t-uniprot); --c-soft:var(--t-uniprot-soft);">
+    <h4><span class="badge">UP</span> UniProt &amp; HPA</h4>
+    <div class="blurb">Proteins — function, sequence, subcellular localization, expression atlas. New capability via TU.</div>
+    <ul>
+      <li class="tu">UniProt_search</li>
+      <li class="tu">UniProt_get_entry_by_accession</li>
+      <li class="tu">UniProt_get_function_by_accession</li>
+      <li class="tu">UniProt_get_subcellular_location_by_accession</li>
+      <li class="tu">UniProt_get_sequence_by_accession</li>
+      <li class="tu">HPA_get_gene_basic_info_by_ensembl_id</li>
+    </ul>
+  </div>
+
+  <div class="family" style="--c:var(--t-reactome); --c-soft:var(--t-reactome-soft);">
+    <h4><span class="badge">RX</span> Reactome &amp; MetaboAnalyst</h4>
+    <div class="blurb">Mammalian-tuned pathway DB and pathway enrichment analysis. New capability.</div>
+    <ul>
+      <li class="tu">Reactome_map_uniprot_to_pathways</li>
+      <li class="tu">Reactome_map_uniprot_to_reactions</li>
+      <li class="tu">MetaboAnalyst_get_pathway_library</li>
+      <li class="tu">MetaboAnalyst_pathway_enrichment</li>
+    </ul>
+  </div>
+
+  <div class="family" style="--c:var(--t-caail); --c-soft:var(--t-caail-soft);">
+    <h4><span class="badge">CL</span> caail bibliography</h4>
+    <div class="blurb">Local grep over the curated cell-ag-AI bibliography. No TU equivalent.</div>
+    <ul>
+      <li class="kept">search_caail</li>
+    </ul>
+  </div>
+
+  <div class="family" style="--c:var(--t-tu); --c-soft:var(--t-tu-soft);">
+    <h4><span class="badge">CG</span> Other TU</h4>
+    <div class="blurb">Single-cell metadata across 50M cells.</div>
+    <ul>
+      <li class="tu">CELLxGENE_get_cell_metadata</li>
+    </ul>
+  </div>
+
+  <div class="family" style="--c:var(--t-yields); --c-soft:var(--t-yields-soft);">
+    <h4><span class="badge">YL</span> Yields calculator</h4>
+    <div class="blurb">Pure math: μ, t_d, q_X, Y_X/Y from time-course points. CHO-industry units. No TU equivalent.</div>
+    <ul>
+      <li class="kept">compute_metabolic_yields</li>
+    </ul>
+  </div>
+
+  <div class="family" style="--c:var(--t-edit); --c-soft:var(--t-edit-soft);">
+    <h4><span class="badge">PE</span> State (notes r/w)</h4>
+    <div class="blurb">Local file ops. Stage edits, never write directly. No TU equivalent.</div>
+    <ul>
+      <li class="kept">read_notes</li>
+      <li class="kept">propose_notes_edit</li>
+    </ul>
+  </div>
+</div>
+
+<div class="callout">
+  <div class="callout-title">Selection rule</div>
+  <p>The system prompt tells the agent: "if a TU tool exists, prefer it; the generic <code>query_*</code> wrappers are fallbacks for novel paths." The custom wrappers stay around because they're flexible (any endpoint, any params), but the named TU tools are easier for the model to use correctly.</p>
+</div>
+</section>
+
+<section id="lifecycle">
+<h2>Request lifecycle</h2>
+<p>What happens when you click <strong>send</strong>:</p>
+
+<div class="seq">
+  <div class="seq-step">
+    <div class="num">1</div>
+    <div class="body">
+      <div class="what">Browser → <code>POST /api/chat</code> with <code>{ message: "…" }</code>.</div>
+      <div class="detail">Browser opens a fetch with <code>Accept: text/event-stream</code>; the response body becomes the SSE stream.</div>
+    </div>
+  </div>
+  <div class="seq-divider"></div>
+
+  <div class="seq-step">
+    <div class="num">2</div>
+    <div class="body">
+      <div class="what">Server appends user turn to history; assembles system prompt.</div>
+      <div class="detail">Reads both SKILL.md files and both notes.md files fresh each turn (~10K tokens cached after first call). Returns one long composite string.</div>
+    </div>
+  </div>
+  <div class="seq-divider"></div>
+
+  <div class="seq-step">
+    <div class="num">3</div>
+    <div class="body">
+      <div class="what">Server starts <code>query(...)</code> with both MCP servers wired.</div>
+      <div class="detail"><code>mcpServers: { science: in-process, tooluniverse: stdio subprocess }</code>. <code>allowedTools: [glob + 40 explicit names]</code>. <code>maxTurns: 24</code>.</div>
+    </div>
+  </div>
+  <div class="seq-divider"></div>
+
+  <div class="seq-step">
+    <div class="num">4</div>
+    <div class="body">
+      <div class="what">SDK emits <code>system/init</code> message. Server pushes it through SSE.</div>
+      <div class="detail">Browser sees both MCP servers as <code>connected</code>. Status dot in header turns amber.</div>
+    </div>
+  </div>
+  <div class="seq-divider"></div>
+
+  <div class="seq-step">
+    <div class="num">5</div>
+    <div class="body">
+      <div class="what">Model emits <code>tool_use</code> blocks; SDK runs the handlers automatically.</div>
+      <div class="detail">Each tool call is forwarded to the SSE stream as <code>type: "assistant"</code> with a <code>tool_use</code> content block. Browser adds a tool card to the chat list and a numbered step in the rail (color-coded by family).</div>
+    </div>
+  </div>
+  <div class="seq-divider"></div>
+
+  <div class="seq-step">
+    <div class="num">6</div>
+    <div class="body">
+      <div class="what">Tool handlers fetch (KEGG, BiGG, …) or read local files (notes, caail).</div>
+      <div class="detail">SDK feeds each result back to the model as <code>tool_result</code>. Server forwards to UI; browser updates the matching tool card from "running…" to "done"/"error".</div>
+    </div>
+  </div>
+  <div class="seq-divider"></div>
+
+  <div class="seq-step">
+    <div class="num">7</div>
+    <div class="body">
+      <div class="what">If the agent calls <code>propose_notes_edit</code>: handler stages the edit in-memory and emits <code>event: proposed_edit</code> on the SSE stream.</div>
+      <div class="detail">Browser pushes a propose-edit card into the chat with apply / reject buttons. The edit is NOT yet on disk.</div>
+    </div>
+  </div>
+  <div class="seq-divider"></div>
+
+  <div class="seq-step">
+    <div class="num">8</div>
+    <div class="body">
+      <div class="what">Model finishes; SDK emits <code>type: "result"</code> with cost, turn count, stop reason. Server pushes <code>event: turn_end</code>, then <code>event: done</code>, then closes the stream.</div>
+      <div class="detail">Browser flips streaming bubble to non-streaming, status dot to green.</div>
+    </div>
+  </div>
+  <div class="seq-divider"></div>
+
+  <div class="seq-step">
+    <div class="num">9</div>
+    <div class="body">
+      <div class="what">User clicks <strong>apply</strong> on a proposed edit. Browser → <code>POST /api/notes/apply { editId }</code>.</div>
+      <div class="detail">Server looks up the edit's <code>target_file</code>, appends a date-stamped block to the right notes.md, drops the edit from the staging map. UI refreshes the card to <em>applied</em>.</div>
+    </div>
+  </div>
+</div>
+
+<div class="callout">
+  <div class="callout-title">Keepalives</div>
+  <p>Bun's <code>idleTimeout</code> defaults to 10 seconds. Long agent turns (3-5 minute multi-tool runs) would otherwise drop. We bump to 255s and emit a <code>: keepalive &lt;timestamp&gt;</code> SSE comment every 15s — invisible to the UI, keeps the connection live.</p>
+</div>
+</section>
+
+<section id="propose">
+<h2>Propose-then-apply flow</h2>
+<p>The agent never writes to <code>notes.md</code> directly. Every change is two-phased: the agent stages, the human approves.</p>
+
+<div class="arch">
+  <div class="arch-row two">
+    <div class="node mcp-science">
+      <h4>1. Agent calls propose_notes_edit</h4>
+      <ul>
+        <li>target_file: "sardine" | "hamster"</li>
+        <li>section: "§6 Validation workflow — …"</li>
+        <li>new_content: markdown</li>
+        <li>rationale: why</li>
+      </ul>
+    </div>
+    <div class="node server">
+      <h4>2. Server stages</h4>
+      <ul>
+        <li>Inserts into <code>state.proposedEdits: Map&lt;id, ProposedEdit&gt;</code></li>
+        <li>Emits <code>event: proposed_edit</code> on the SSE stream</li>
+        <li>Tool returns "Edit X staged for review"</li>
+      </ul>
+    </div>
+  </div>
+  <div class="arrow"><svg width="14" height="22"><polyline points="7,0 7,16" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="3,14 11,14 7,22" fill="currentColor"/></svg></div>
+  <div class="arch-row two">
+    <div class="node client">
+      <h4>3. UI shows inline diff card</h4>
+      <ul>
+        <li>Card in chat with target file, section, rationale, full new_content</li>
+        <li>Apply / Reject buttons attached</li>
+      </ul>
+    </div>
+    <div class="node">
+      <h4>4. User decides</h4>
+      <ul>
+        <li><strong>Apply</strong> → POST <code>/api/notes/apply</code> → server appends date-stamped block to the right notes.md → UI marks card "applied"</li>
+        <li><strong>Reject</strong> → POST <code>/api/notes/reject</code> → server drops the staged edit and injects a system note into history so the agent doesn't retry</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="callout">
+  <div class="callout-title">Why append-only</div>
+  <p>The MVP applies edits as date-stamped blocks at the bottom of <code>notes.md</code> rather than surgically replacing the named section. The agent's <code>section</code> field and <code>rationale</code> are preserved in the appended block (HTML comment marker + level-3 heading), so you can fold the change into the right section manually later. This trades polish for safety — section-precise replacement requires a robust markdown editor I didn't want to risk for a smell-test build.</p>
+</div>
+</section>
+
+<section id="skills">
+<h2>Skills layer</h2>
+<p>Six Claude Code skills under <code>.claude/skills/</code>. Two of them (the driver skills) are loaded verbatim into the agent's system prompt every turn. The four others are available when working in this workspace through the Claude Code CLI.</p>
+
+<table>
+  <thead><tr><th>Skill</th><th>Used by</th><th>Role</th></tr></thead>
+  <tbody>
+    <tr><td><code>project-sardine</code></td><td>Claude Code only</td><td>Top-level Sardine router — briefs the two halves, routes to sub-skills</td></tr>
+    <tr><td><strong><code>sardine-start-with</code></strong></td><td>Agent + Claude Code</td><td><strong>Driver skill loaded into agent system prompt.</strong> Composition (basal + growth factors + often-ignored). 7 modes.</td></tr>
+    <tr><td><code>sardine-thrive</code></td><td>Claude Code only</td><td>Measurement axis — RNA-Seq, doubling time, imaging</td></tr>
+    <tr><td><code>project-hamster</code></td><td>Claude Code only</td><td>Top-level Hamster router</td></tr>
+    <tr><td><strong><code>hamster-validate</code></strong></td><td>Agent + Claude Code</td><td><strong>Driver skill loaded into agent system prompt.</strong> Validation loop — ingredient mapping → predict → compare → diagnose. 7 modes.</td></tr>
+    <tr><td><code>hamster-metabolic-model</code></td><td>Claude Code only</td><td>Drill-down for iCHO model interaction (BiGG, GPR, exchange bounds)</td></tr>
+  </tbody>
+</table>
+
+<p>The router and sub-drill-down skills exist so a Claude Code session in this workspace can pick the right operating manual for a focused conversation. The agent app at <code>:5173</code> uses the two driver skills directly — both are always loaded, regardless of the kind of question.</p>
+</section>
+
+<section id="data">
+<h2>External services</h2>
+<p>Every external API the agent touches. All read-only; none of them are sent any sensitive data; some accept optional API keys for higher rate limits.</p>
+
+<table>
+  <thead><tr><th>Service</th><th>Endpoint</th><th>Auth</th><th>What we use it for</th></tr></thead>
+  <tbody>
+    <tr><td>KEGG</td><td><code>rest.kegg.jp</code></td><td>none</td><td>Metabolic pathways, gene/organism, compound details, signaling networks</td></tr>
+    <tr><td>Ensembl</td><td><code>rest.ensembl.org</code></td><td>none</td><td>Genome, gene lookup, sequences (any species)</td></tr>
+    <tr><td>BiGG Models</td><td><code>bigg.ucsd.edu/api/v2</code></td><td>none</td><td>Genome-scale metabolic models (iCHO family)</td></tr>
+    <tr><td>ChEBI / EBI OLS</td><td><code>ebi.ac.uk/ols/api</code></td><td>none</td><td>Compound IDs (ingredient → metabolite)</td></tr>
+    <tr><td>Rhea</td><td>via TU</td><td>none</td><td>Biochemical reactions (curated)</td></tr>
+    <tr><td>EuropePMC</td><td><code>ebi.ac.uk/europepmc/...</code></td><td>none</td><td>PubMed + PMC + preprints</td></tr>
+    <tr><td>NCBI E-utilities</td><td>via TU PubMed_*</td><td>optional <code>NCBI_API_KEY</code></td><td>PubMed article details, related, cited-by</td></tr>
+    <tr><td>arXiv</td><td><code>export.arxiv.org/api/query</code></td><td>none</td><td>Preprints (Atom-parsed)</td></tr>
+    <tr><td>bioRxiv / medRxiv</td><td>via TU BioRxiv_*</td><td>none</td><td>Bio preprints (more relevant than arXiv)</td></tr>
+    <tr><td>UniProt</td><td>via TU UniProt_*</td><td>none</td><td>Protein sequence, function, PTMs, subcellular localization</td></tr>
+    <tr><td>Reactome</td><td>via TU Reactome_*</td><td>none</td><td>Mammalian-tuned pathway DB</td></tr>
+    <tr><td>MetaboAnalyst</td><td>via TU</td><td>none</td><td>Pathway enrichment analysis</td></tr>
+    <tr><td>Human Protein Atlas</td><td>via TU HPA_*</td><td>none</td><td>Gene expression by tissue / cell line</td></tr>
+    <tr><td>GlyGen</td><td>via TU</td><td>none</td><td>Glycan structures (CHO mAb glycosylation)</td></tr>
+    <tr><td>CELLxGENE</td><td>via TU</td><td>none</td><td>Single-cell metadata across 50M cells</td></tr>
+  </tbody>
+</table>
+
+<p>The only outbound credential the system uses is <code>ANTHROPIC_API_KEY</code> from the user's shell environment. Never logged, never sent anywhere except <code>api.anthropic.com</code>.</p>
+</section>
+
+<section id="run">
+<h2>How to run</h2>
+
+<pre><code>git clone https://github.com/harragi/CellAg.git
+cd CellAg/InsilicoMediaDesign/ProjectSardine/agent
+
+# install
+(cd server && bun install)
+(cd web && bun install)
+
+# configure
+cp .env.example .env   # then fill in ANTHROPIC_API_KEY
+
+# install ToolUniverse (the MCP subprocess)
+uv tool install tooluniverse
+
+# boot (two terminals)
+(cd server && bun run dev)   # → :3001
+(cd web && bun run dev)      # → :5173
+
+open http://localhost:5173</code></pre>
+
+<p>That's it. The Welcome screen lists the canned prompts; click one to watch the loop run.</p>
+</section>
+
+<div class="footer">
+  <p>Generated 2026-05-09 to brief the team. The architecture and tool catalog reflect commit <code>cb4fbbb</code>. If a major piece changes, regenerate this file.</p>
+  <p>Sources: <a href="https://github.com/harragi/CellAg">harragi/CellAg</a> · the agent's own <code>tu-allowlist.ts</code>, <code>system-prompt.ts</code>, <code>agent.ts</code>, and <code>web/src/lib/tools.ts</code>.</p>
+</div>
+
+</main>
+</div>
+</body>
+</html>

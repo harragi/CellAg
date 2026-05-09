@@ -72,6 +72,10 @@ The agent is **unified** — it operates end-to-end across composition and valid
 
 For end-to-end queries (e.g., *"design a CHO media and validate it"*), the agent uses both halves in one conversation. The agent treats notes as the source of truth — reads on every turn, proposes section edits inline. **Nothing reaches disk without a click.**
 
+## Architecture overview
+
+A single-page HTML diagram lives at [`architecture.html`](./architecture.html) — system architecture, layered view, color-coded tool catalog (50 tools across 12 families), request lifecycle, propose-then-apply flow, skills layer, and external services. Open it locally with `open architecture.html` or view raw on GitHub.
+
 ## How the agent works
 
 ```
