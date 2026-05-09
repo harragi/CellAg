@@ -36,6 +36,12 @@
   --t-chebi-soft: #e6e0f1;
   --t-yields: #a8324a;      /* compute: rose */
   --t-yields-soft: #f4dde3;
+  --t-uniprot: #c45b1a;     /* proteins: deep orange */
+  --t-uniprot-soft: #f5e1d0;
+  --t-reactome: #4a7a3e;    /* pathways alt: olive green */
+  --t-reactome-soft: #e3edd9;
+  --t-tu: #4a4a6a;          /* generic TU fallback: slate */
+  --t-tu-soft: #e3e3ec;
 
   /* Project palette */
   --p-sardine: #8a3324;     /* fish, design — brand maroon */

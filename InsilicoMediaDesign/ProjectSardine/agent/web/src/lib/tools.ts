@@ -15,10 +15,10 @@ export type ToolKey =
   | "query_chebi"
   | "compute_metabolic_yields";
 
-export type ToolKind = "database" | "literature" | "state" | "edit" | "model" | "compute";
+export type ToolKind = "database" | "literature" | "state" | "edit" | "model" | "compute" | "protein" | "pathway";
 
 export type ToolMeta = {
-  key: ToolKey;
+  key: string;
   label: string;
   short: string; // 2-3 char letter badge
   kind: ToolKind;
@@ -33,7 +33,10 @@ export type ToolMeta = {
     | "edit"
     | "bigg"
     | "chebi"
-    | "yields";
+    | "yields"
+    | "uniprot"
+    | "reactome"
+    | "tu";
   blurb: string;
 };
 
@@ -120,20 +123,66 @@ const META: Record<ToolKey, ToolMeta> = {
   },
 };
 
+/**
+ * Prefix-based fallback for ToolUniverse tool families. When the agent
+ * calls a TU tool, the SDK reports its name like `KEGG_get_compound` (with
+ * the `mcp__tooluniverse__` prefix already stripped). Map by family prefix
+ * so the UI keeps consistent color coding without listing every TU tool.
+ */
+const TU_PREFIXES: { match: (name: string) => boolean; meta: Omit<ToolMeta, "label" | "short" | "key"> }[] = [
+  { match: (n) => /^kegg/i.test(n), meta: { kind: "database", color: "kegg", blurb: "KEGG" } },
+  { match: (n) => /^ensembl/i.test(n), meta: { kind: "database", color: "ensembl", blurb: "Ensembl" } },
+  { match: (n) => /^pubmed/i.test(n), meta: { kind: "literature", color: "europepmc", blurb: "PubMed" } },
+  { match: (n) => /^arxiv/i.test(n), meta: { kind: "literature", color: "arxiv", blurb: "arXiv" } },
+  { match: (n) => /^biorxiv/i.test(n), meta: { kind: "literature", color: "arxiv", blurb: "bioRxiv" } },
+  { match: (n) => /^bigg/i.test(n), meta: { kind: "model", color: "bigg", blurb: "BiGG" } },
+  { match: (n) => /^chebi|^rhea/i.test(n), meta: { kind: "database", color: "chebi", blurb: "ChEBI / Rhea" } },
+  { match: (n) => /^uniprot/i.test(n), meta: { kind: "protein", color: "uniprot", blurb: "UniProt" } },
+  { match: (n) => /^reactome/i.test(n), meta: { kind: "pathway", color: "reactome", blurb: "Reactome" } },
+  { match: (n) => /^metaboanalyst/i.test(n), meta: { kind: "pathway", color: "reactome", blurb: "MetaboAnalyst" } },
+  { match: (n) => /^hpa/i.test(n), meta: { kind: "protein", color: "uniprot", blurb: "HPA" } },
+  { match: (n) => /^glygen/i.test(n), meta: { kind: "model", color: "bigg", blurb: "GlyGen" } },
+  { match: (n) => /^cellxgene/i.test(n), meta: { kind: "database", color: "tu", blurb: "CELLxGENE" } },
+  { match: (n) => /^opentargets/i.test(n), meta: { kind: "database", color: "tu", blurb: "OpenTargets" } },
+];
+
 const FALLBACK: ToolMeta = {
-  key: "read_notes",
+  key: "_fallback",
   label: "tool",
   short: "?",
   kind: "database",
-  color: "kegg",
+  color: "tu",
   blurb: "",
 };
 
 export function metaFor(rawName: string): ToolMeta {
-  // Strip `mcp__science__` prefix if still present.
+  // Strip `mcp__<server>__` prefix if still present.
   const m = /^mcp__[^_]+__(.+)$/.exec(rawName);
-  const key = (m ? m[1] : rawName) as ToolKey;
-  return META[key] ?? { ...FALLBACK, label: rawName, short: rawName.slice(0, 2).toUpperCase() };
+  const key = m ? m[1] : rawName;
+  // Exact match against our own custom-tool registry first.
+  if (key in META) return META[key as ToolKey]!;
+  // Then prefix match for TU families.
+  for (const { match, meta } of TU_PREFIXES) {
+    if (match(key)) {
+      return {
+        ...meta,
+        key,
+        label: key,
+        short: shortBadgeFor(key),
+      };
+    }
+  }
+  return { ...FALLBACK, label: key, short: key.slice(0, 2).toUpperCase() };
+}
+
+/** Two-letter badge from a tool name. Splits on underscore and uses the
+ *  initials of the first up to two segments — e.g. KEGG_get_compound → KG,
+ *  PubMed_search_articles → PS. */
+function shortBadgeFor(name: string): string {
+  const parts = name.split("_").filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase();
 }
 
 export const ALL_TOOLS: ToolMeta[] = Object.values(META);

@@ -2,8 +2,13 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import { buildSystemPrompt } from "./system-prompt.ts";
 import { buildScienceMcpServer, SCIENCE_TOOL_GLOB, type NotifyClient } from "./tools/index.ts";
 import { appendTurn } from "./state.ts";
+import { TU_ALLOWED_TOOLS } from "./tu-allowlist.ts";
 
 const MODEL = process.env.AGENT_MODEL ?? "claude-opus-4-7";
+
+// ToolUniverse MCP stdio entry point. Installed by `uv tool install
+// tooluniverse`; binary lives in the user's PATH (typically ~/.local/bin).
+const TU_BIN = process.env.TU_BIN ?? "tooluniverse-smcp-stdio";
 
 export type SsePush = (event: string, data: unknown) => void;
 
@@ -28,10 +33,17 @@ export async function runAgentTurn(userMessage: string, push: SsePush): Promise<
       options: {
         model: MODEL,
         systemPrompt,
-        mcpServers: { science },
-        allowedTools: [SCIENCE_TOOL_GLOB],
+        mcpServers: {
+          science,
+          tooluniverse: {
+            command: TU_BIN,
+            args: [],
+            env: { PYTHONIOENCODING: "utf-8" },
+          },
+        },
+        allowedTools: [SCIENCE_TOOL_GLOB, ...TU_ALLOWED_TOOLS],
         permissionMode: "bypassPermissions",
-        maxTurns: 20,
+        maxTurns: 24,
       },
     });
 
