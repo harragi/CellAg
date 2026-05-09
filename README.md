@@ -82,6 +82,12 @@ A single-page HTML diagram lives at [`architecture.html`](./architecture.html) �
 
 The model is a Monod-style ODE with multiplicative inhibition (lactate, NH₃, osmolarity) — a fast triage tool, not a substitute for an iCHO FBA run. Its job is to find which knob to spin before a wet-lab cycle.
 
+## Sensory bench
+
+[`sensory-bench.html`](./sensory-bench.html) is the sibling experiment for the sensory side: how cell composition, post-harvest aging, and cooking method drive perceivable taste. Eleven inputs (lipid class fractions, iron, glutamine, cell density, antioxidant capacity, aging time, storage, cooking method) feed three coupled chains — Maillard chemistry, lipid oxidation, and umami precursor pools (Yamaguchi 1972 synergy: u(MSG, IMP) ≈ MSG + 1218·MSG·IMP). Outputs: an 8-axis radar (umami, savory, fatty, beefy, fishy, green, metallic, oxidized), a live umami-vs-aging-time curve showing the IMP peak, a predicted-volatile-compound bar chart with eight key compounds (hexanal, nonanal, 2,4-decadienal, 1-octen-3-ol, 2-methylbutanal, furfural, 2,5-dimethylpyrazine, trans-2-nonenal), and a verdict panel that flags off-flavor risks. Five presets: Beef / Salmon / Chicken / Lean / Over-aged.
+
+References: caail Sensory Prediction section (Lee 2023 POM, Du 2025, Sun 2023/2026, Shen 2024), Mottram 1998, Yamaguchi 1972, plus Fu 2026 on oleic-acid-driven adipogenesis (PubMed via ToolUniverse).
+
 ## How the agent works
 
 ```

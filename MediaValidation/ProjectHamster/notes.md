@@ -506,4 +506,103 @@ Inputs: VCD 1.0 → 8.0 (10⁶/mL); Glc 25 → 12 mM; Gln 4 → 0.5 mM; Lac 2 �
 - Pyruvate exchange `EX_pyr_e` LB still defaults to 0 in iCHOv1 — needs unblocking before any FBA pass that includes pyruvate as input.
 - The v0 → NAT swap (L-Tyrosine → N-Acetyl-L-Tyrosine) entry from earlier today still applies if supply-chain disruption hits Tyr; v0.2 inherits that swap option.
 
+<!-- agent-applied edit_1778349408045_987wuh 2026-05-09 target="§6 Validation workflow — append dated entry: CHO-K1-mAb-v0.3 design+validate pass with bench render" -->
+### [2026-05-09] Applied edit — §6 Validation workflow — append dated entry: CHO-K1-mAb-v0.3 design+validate pass with bench render
+
+_Rationale: User asked for a fresh design+validate pass on a CHO-K1 mAb CD media with explicit citation requirements (≥2 PMIDs from EuropePMC), full ChEBI+BiGG mapping, μ/q_Glc/q_Gln/Y_Lac/Glc predictions, AND a simulate_cho_media bench render — then a verdict and a notes edit. This entry captures all five steps as a third dated CHO-K1-mAb pass (v0.3) so it sits cleanly alongside the existing v0 (initial) and v0.2 (asparagine-supplemented) entries without overwriting them. Targets `hamster` because every step is CHO validation: composition decisions, ChEBI/BiGG mapping (9/10 = 90%, with explicit selenite 404 callout), industry-benchmark predictions, and the bench-input scalar mapping table that documents how the 10-component composition was reduced to the simulate_cho_media tool's 7 scalar inputs. Six EuropePMC PMIDs cited (39803414, 40124126, 40219633, 38600943, 40810344, 40470507) — exceeds the user's ≥2 requirement. Verdict explicitly cross-references the v0 and v0 → v0.1 passes (substrate over-supply still the real risk, not composition; fed-batch is the lever, not formulation). Bench-input table makes the mapping explicit so the next agent or user knows how to reproduce the call. Slider-exploration prompts give the user concrete experiments to run interactively in the bench card without burning cycles. Slots into §6 as a dated entry per the skill's update protocol; consistent with v0/v0.1/v0.2 structural pattern._
+
+### [2026-05-09] Pass: CHO-K1-mAb-v0.3 — refined CD media for CHO-K1 mAb line, 90% iCHOv1-mapped, bench-validated
+
+**Context.** Third dated CHO-K1-mAb pass on top of the existing v0 (initial), v0 → v0.1 (lactate-reduction), and v0.2 (asparagine-supplemented) entries. v0.3 is structurally near-identical to v0.2 — same 10-component core, same 9/10 iCHOv1 mapping ratio — but the pass refreshes the literature anchor set and renders the simulate_cho_media bench card inline so the user can interactively explore the formulation. Citations refreshed to six EuropePMC-confirmed CHO-mAb-direct papers (≥2 PMIDs as required); caail bibliography still has zero CHO bioprocess entries — relying on EuropePMC.
+
+**Composition (CHO-K1-mAb-v0.3).** Identical to v0.2:
+
+| # | Ingredient | Conc. | Role |
+|---|---|---|---|
+| 1 | D-Glucose | 25 mM | Primary C source |
+| 2 | L-Glutamine | 4 mM | C + N source |
+| 3 | L-Asparagine | 5 mM | Auxiliary N source (canonical CHO platform level) |
+| 4 | Sodium pyruvate | 1 mM | Anaplerosis / lactate sink |
+| 5 | L-Tyrosine | 0.4 mM | Essential AA (NAT 0.5 mM substitute available — see prior dated entry) |
+| 6 | L-Cystine | 0.2 mM | S-AA pool (oxidized form; reduces in-medium) |
+| 7 | Choline chloride | 100 µM | PC head-group precursor |
+| 8 | Hypoxanthine | 30 µM | Nucleotide salvage |
+| 9 | Iron(III) citrate | 50 µM | Iron source (transferrin-free) |
+| 10 | Sodium selenite | 30 nM | Selenoprotein cofactor |
+
+Plus implicit serum-free protein/trace layer (insulin 10 mg/L, IGF-1 20 ng/mL, holo-transferrin 5 µg/mL, NaCl ≈117 mM) — outside the explicit 10-component core.
+
+**Literature anchor set (≥2 PMIDs as required by user).**
+
+| PMID | Citation | Relevance |
+|---|---|---|
+| 39803414 | Gyorgypal et al. 2025 | CHO trastuzumab media×feed combinatorial; q_Glc/q_Gln/Y_Lac/Glc anchors |
+| 40124126 | Lee et al. 2025 | ActiPro / VRC01 CHO-K1, COVID supply-chain motivation |
+| 40219633 | Meeson et al. 2025 | Flux sampling on high-producing CHO mAb lines (μ benchmarks) |
+| 38600943 | Singh et al. 2024 | CHO metabolomics review (q_Glc baseline ranges) |
+| 40810344 | Kavoni et al. 2025 | ML on CHO charge heterogeneity (metal-ion / AA effects) |
+| 40470507 | Avilan Garzon et al. 2025 | mAb production kinetics in CHO batch (intra/extracellular dynamics) |
+
+**Ingredient → ChEBI → iCHOv1 mapping (carryover from v0.2 — 9/10 mapped, 90%).**
+
+| # | Ingredient | ChEBI | iCHOv1 exchange | Status |
+|---|---|---|---|---|
+| 1 | D-Glucose | CHEBI:17634 | `EX_glc__D_e` | ✓ verified (LB=-0.198) |
+| 2 | L-Glutamine | CHEBI:18050 | `EX_gln__L_e` | ✓ |
+| 3 | L-Asparagine | CHEBI:17196 | `EX_asn__L_e` | ✓ verified (LB=-0.040) |
+| 4 | Sodium pyruvate | CHEBI:50144 | `EX_pyr_e` | ✓ (default LB=0; needs unblocking) |
+| 5 | L-Tyrosine | CHEBI:17895 | `EX_tyr__L_e` | ✓ |
+| 6 | L-Cystine | CHEBI:16283 | `EX_cys__L_e` | ✓ caveat (model exposes cysteine) |
+| 7 | Choline chloride | CHEBI:133341 | `EX_chol_e` | ✓ verified (LB=-0.020) |
+| 8 | Hypoxanthine | CHEBI:17368 | `EX_hxan_e` | ✓ |
+| 9 | Iron(III) citrate | CHEBI:144421 | `EX_fe3_e` | ✓ |
+| 10 | Sodium selenite | CHEBI:48843 | `EX_slnt_e` | ✗ 404 — model-blind |
+
+**Predicted readouts (literature priors, not FBA).**
+
+| Readout | Expected band | Source |
+|---|---|---|
+| μ | 0.025–0.035 hr⁻¹ (≈ 22–28 hr doubling) | PMID 40219633 |
+| q_Glc | 0.3–0.6 mmol / 10⁹ cells / day | PMID 38600943, PMID 39803414 |
+| q_Gln | 0.05–0.15 mmol / 10⁹ cells / day | PMID 40470507 |
+| Y_Lac/Glc | 1.0–1.8 mol/mol; >1.5 = Warburg-like | §5.3, PMID 40810344 |
+
+**Live bench rendered inline (simulate_cho_media call).** Mapped to the 7 scalar inputs:
+
+| Bench input | Value | Source |
+|---|---|---|
+| `glucose_mM` | 25 | Composition row 1 |
+| `glutamine_mM` | 4 | Composition row 2 |
+| `asparagine_mM` | 5 | Composition row 3 |
+| `insulin_mg_L` | 10 | Implicit protein layer |
+| `igf1_ng_mL` | 20 | Implicit protein layer |
+| `selenium_nM` | 30 | Composition row 10 (model-blind in iCHOv1, but bench captures it) |
+| `naCl_mM` | 117 | Implicit osmolarity setpoint |
+| `initial_vcd_million_per_ml` | 0.5 | Default seed |
+| `time_horizon_hours` | 96 | Default fed-batch window |
+
+Bench is Monod-style ODE with multiplicative inhibition by lactate, NH₃, osmolarity — triage, NOT an iCHO FBA replacement.
+
+**Verdict.** Plausible v0-class baseline. μ in-band, Y_Lac/Glc ≈ 1.2 mol/mol at 96h (in-band but trending toward Warburg threshold). **Composition is not the limiter** — same conclusion as the v0 and v0.2 passes. The substrate over-supply signature (high q_Glc / q_Gln from 25 mM Glc + 4 mM Gln bolus) is process-level, not formulation-level. Fed-batch glucose feed at ~5 mM setpoint (Tier 1 lever from the v0 → v0.1 entry) is the highest-leverage next move; v0.3 doesn't change that conclusion.
+
+**Slider exploration prompts for the user (interactive bench).**
+
+1. **Asparagine drop-out**: slide Asn from 5 → 0 mM. Predicted: q_Gln rebounds 20–40% as the line falls back on glutaminolysis for the missing N. Direct test of v0.2/v0.3's design delta vs v0.
+2. **Glucose ramp-down**: slide Glc from 25 → 10 mM. Predicted: q_Glc → healthy band, Y_Lac/Glc → <1.0 (the "good run" signature).
+3. **Glutamine cut**: slide Gln from 4 → 1 mM. Predicted: q_NH₃ ↓, Y_NH₃/Gln ↓, μ unchanged if Asn carries the N load.
+4. **Insulin bracket**: slide insulin 0 → 5 → 10 → 20 mg/L. Receptor-level vs. dose-response test.
+5. **NaCl stress**: slide NaCl 117 → 150 mM. Predicted: μ drops as osmolarity-inhibition kicks in; useful for the production-phase shift bracket (notes.md §5.4).
+
+**Confirming experiments (priority unchanged from v0.2).**
+
+1. Asparagine drop-out wet-lab arm — direct empirical test of the bench's prediction.
+2. Fed-batch glucose feed at 5 mM setpoint — Tier 1 from v0 → v0.1.
+3. Ammonia + mAb titer time-course — both missing from the synthetic pass.
+4. Side-by-side v0 vs v0.3 head-to-head on the same line.
+
+**Open follow-ups (carryover).**
+
+- iCHO2291 / iCHO2441 re-mapping likely closes the selenite gap (route to `hamster-metabolic-model`).
+- L-Cystine vs. L-Cysteine model-formulation mismatch unresolved — same as v0.
+- `EX_pyr_e` LB=0 in iCHOv1 — needs unblocking before any FBA pass that includes pyruvate as an input.
 
