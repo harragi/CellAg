@@ -76,6 +76,12 @@ For end-to-end queries (e.g., *"design a CHO media and validate it"*), the agent
 
 A single-page HTML diagram lives at [`architecture.html`](./architecture.html) — system architecture, layered view, color-coded tool catalog (50 tools across 12 families), request lifecycle, propose-then-apply flow, skills layer, and external services. Open it locally with `open architecture.html` or view raw on GitHub.
 
+## CHO media bench
+
+[`cho-bench.html`](./cho-bench.html) is a self-contained interactive bench for varying CHO media components and watching how growth, byproducts, and inhibitor pressure respond live. Sliders for glucose / glutamine / asparagine / insulin / IGF-1 / selenium / NaCl / inoculum / time, four SVG charts (VCD over time, substrates, byproducts, ±20% sensitivity bars), live verdict panel that flags lactate / NH₃ / osmolarity bottlenecks. Includes the seven-major-CHO-inhibitor reference catalog with thresholds and citations.
+
+The model is a Monod-style ODE with multiplicative inhibition (lactate, NH₃, osmolarity) — a fast triage tool, not a substitute for an iCHO FBA run. Its job is to find which knob to spin before a wet-lab cycle.
+
 ## How the agent works
 
 ```
