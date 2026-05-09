@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Chat, type ChatHandle } from "./components/Chat.tsx";
 import { Header, type AgentStatus } from "./components/Header.tsx";
+import { ProgressStrip } from "./components/ProgressStrip.tsx";
 import { StepsRail } from "./components/StepsRail.tsx";
 import type { ToolCall } from "./components/ToolCard.tsx";
 import type { BenchInit } from "./components/BenchCard.tsx";
@@ -23,8 +24,16 @@ export function App() {
   const [benches, setBenches] = useState<BenchData[]>([]);
   const [toolCalls, setToolCalls] = useState<ToolCall[]>([]);
   const [status, setStatus] = useState<AgentStatus>("idle");
+  const [runStartedAt, setRunStartedAt] = useState<number | null>(null);
   const [model, setModel] = useState<string>("claude-opus-4-7");
   const chatRef = useRef<ChatHandle>(null);
+
+  // Track when a run starts so the progress strip can show elapsed time.
+  function handleStatusChange(next: AgentStatus) {
+    setStatus(next);
+    if (next === "running") setRunStartedAt(Date.now());
+    else if (next === "idle") setRunStartedAt(null);
+  }
 
   useEffect(() => {
     fetchAgentConfig()
@@ -43,6 +52,7 @@ export function App() {
     setBenches([]);
     setToolCalls([]);
     setStatus("idle");
+    setRunStartedAt(null);
   }
 
   return (
@@ -54,6 +64,7 @@ export function App() {
         description={config?.description ?? ""}
         onReset={reset}
       />
+      <ProgressStrip status={status} toolCalls={toolCalls} runStartedAt={runStartedAt} />
       <div className="app-body">
         <StepsRail calls={toolCalls} />
         <Chat
@@ -83,7 +94,7 @@ export function App() {
               prev.map((c) => (c.id === id ? { ...c, result, isError } : c))
             );
           }}
-          onStatusChange={setStatus}
+          onStatusChange={handleStatusChange}
         />
       </div>
     </div>

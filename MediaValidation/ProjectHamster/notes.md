@@ -422,4 +422,88 @@ _Rationale: User reports too much lactate in CHO-K1-mAb-v0 — exactly the failu
 - Re-run iCHO2291 / iCHO2441 mapping with v0.1 — newer reconstructions have richer trace-element coverage.
 - caail bibliography: zero CHO lactate-control entries; relying on EuropePMC (PMID 41978641 Xu 2026, PMID 40810344 Kavoni 2025, PMID 34750672 Mahé 2022) and bioprocess canon.
 
+<!-- agent-applied edit_1778348781029_jjgvx6 2026-05-09 target="§6 Validation workflow — append dated entry: CHO-K1-mAb-v0.2 design+validate pass" -->
+### [2026-05-09] Applied edit — §6 Validation workflow — append dated entry: CHO-K1-mAb-v0.2 design+validate pass
+
+_Rationale: Captures the requested fresh design+validate pass as a third dated entry in §6, framed as "v0.2" so it sits cleanly alongside the existing v0 (initial pass) and v0 → v0.1 (lactate-reduction) entries instead of overwriting them. Targets `hamster` because every step is CHO validation: composition decisions, ChEBI/BiGG mapping (with live BiGG verification on 2026-05-09 for `EX_glc__D_e`, `EX_asn__L_e`, `EX_chol_e`, plus 404 confirmation for `EX_etha_e`), industry-benchmark prediction bands, compute_metabolic_yields sanity check, verdict, confirming experiments. The two anchor citations are CHO-mAb-direct (Gyorgypal 2025 PMID 39803414 — trastuzumab media×feed; Meeson 2025 PMID 40219633 — flux sampling for high-producing CHO), with Kavoni 2025 PMID 40810344 for ML/charge-heterogeneity context. The pass adds L-asparagine 5 mM (canonical CHO platform N source, missing from v0) and moves ethanolamine to the implicit trace layer — together these improve the iCHOv1 mapping ratio from 80% to 90% without inventing a new design intent. Verdict explicitly cross-references the v0 pass (substrate over-supply still the real risk, not composition) and the v0 → v0.1 entry (process levers, not formulation). New asparagine drop-out experiment surfaces as the top-priority confirming test, since it directly tests v0.2's design delta vs v0._
+
+### [2026-05-09] Pass: CHO-K1 mAb candidate "CHO-K1-mAb-v0.2" against iCHOv1 (asparagine-supplemented)
+
+**Context.** Re-run of the design+validate loop on top of the existing CHO-K1-mAb-v0 / v0.1 entries. v0.2 differs in two ways: (1) **adds L-asparagine 5 mM** as a 10th component (industry-standard CHO platform N source, missing from v0), and (2) drops free ethanolamine from the explicit composition (moved to the implicit trace layer alongside insulin/transferrin) — both changes improve the model-mapped fraction without changing the design intent. Citations are refreshed to two CHO-mAb-direct studies pulled from EuropePMC: **Gyorgypal et al. 2025 (PMID 39803414)** — direct CHO trastuzumab media×feed combinatorial study with Y_Lac/Glc and μ measurements — and **Meeson et al. 2025 (PMID 40219633)** — flux-sampling identification of metabolic signatures of high-producing CHO. **Kavoni et al. 2025 (PMID 40810344)** is also cited for the ML-on-CHO-media context. caail bibliography still has zero CHO-bioprocess entries; relying on EuropePMC.
+
+**Composition (CHO-K1-mAb-v0.2).**
+
+| # | Ingredient | Role | Conc. (starting point) |
+|---|---|---|---|
+| 1 | D-Glucose | Primary carbon source | 25 mM (~4.5 g/L) |
+| 2 | L-Glutamine | Carbon + nitrogen | 4 mM |
+| 3 | **L-Asparagine** (NEW vs v0) | Major auxiliary N source for mAb biosynthesis; canonical CHO platform Asn level | 5 mM |
+| 4 | Sodium pyruvate | Anaplerosis / lactate sink | 1 mM |
+| 5 | L-Tyrosine | Essential AA (low-solubility flagged ingredient — see v0 NAT swap entry) | 0.4 mM |
+| 6 | L-Cystine | S-amino-acid pool (oxidized form; reduces to cysteine in-medium) | 0.2 mM |
+| 7 | Choline chloride | Phospholipid head-group precursor | 100 µM |
+| 8 | Hypoxanthine | Nucleotide salvage | 30 µM |
+| 9 | Iron(III) citrate | Iron source (transferrin-free) | 50 µM |
+| 10 | Sodium selenite | Selenoprotein cofactor (GPx, TrxR) | 30 nM |
+
+Plus the implicit serum-free protein/trace layer (recombinant insulin 10 µg/mL, holo-transferrin 5 µg/mL, ethanolamine 10 µM as a model-blind PE precursor) — outside the 10-component explicit core.
+
+**Ingredient → ChEBI → iCHOv1 exchange mapping.** Verified live against the BiGG REST API on 2026-05-09.
+
+| # | Ingredient | ChEBI ID | iCHOv1 exchange | Status |
+|---|---|---|---|---|
+| 1 | D-Glucose | CHEBI:17634 | `EX_glc__D_e` | ✓ verified (default LB=-0.198, "D-Glucose exchange") |
+| 2 | L-Glutamine | CHEBI:18050 | `EX_gln__L_e` | ✓ mapped |
+| 3 | L-Asparagine | CHEBI:17196 | `EX_asn__L_e` | ✓ verified (default LB=-0.040, "L-Asparagine exchange") |
+| 4 | Sodium pyruvate | CHEBI:50144 (parent: CHEBI:15361) | `EX_pyr_e` | ✓ mapped (default LB=0; needs unblocking for uptake) |
+| 5 | L-Tyrosine | CHEBI:17895 | `EX_tyr__L_e` | ✓ mapped |
+| 6 | L-Cystine | CHEBI:16283 | `EX_cys__L_e` (L-cysteine) | ✓ mapped with caveat — model exposes cysteine, formulation has cystine; assume in-medium reduction |
+| 7 | Choline chloride | CHEBI:133341 (cation: CHEBI:15354) | `EX_chol_e` | ✓ verified (default LB=-0.020, "Choline exchange") |
+| 8 | Hypoxanthine | CHEBI:17368 | `EX_hxan_e` | ✓ mapped |
+| 9 | Iron(III) citrate | CHEBI:144421 | `EX_fe3_e` | ✓ mapped (Fe³⁺ exchange present; citrate carrier abstracted away) |
+| 10 | Sodium selenite | CHEBI:48843 | `EX_slnt_e` | ✗ **404 in iCHOv1** — model-blind |
+
+**Unmapped fraction: 1/10 (10%) — selenite only.** Improvement over v0 (which had 2/10 unmapped including ethanolamine) by virtue of moving ethanolamine to the implicit trace layer. Selenite remains a known iCHOv1 limitation — the GSM doesn't represent selenoprotein incorporation at the exchange-reaction level. iCHO2291 / iCHO2441 may close this gap (route to `hamster-metabolic-model` for verification).
+
+**Industry-benchmark predictions for CHO-K1 fed-batch (literature priors, not FBA).**
+
+| Readout | Expected band | Source |
+|---|---|---|
+| μ | 0.025–0.035 hr⁻¹ (≈ 22–28 hr doubling) | notes.md §5.4; Meeson 2025 PMID 40219633 (flux sampling on CHO mAb producers) |
+| q_Glc | 0.3–0.6 mmol / 10⁹ cells / day | notes.md §5.2; Gyorgypal 2025 PMID 39803414 (trastuzumab CHO media×feed) |
+| q_Gln | 0.05–0.15 mmol / 10⁹ cells / day | notes.md §5.2 |
+| Y_Lac/Glc | 1.0–1.8 mol/mol; >1.5 = Warburg-like | notes.md §5.3; Kavoni 2025 PMID 40810344 (CHO ML metabolic state review) |
+
+**Sanity-check on synthetic time-course (t=24h → t=96h) via `compute_metabolic_yields`.**
+
+Inputs: VCD 1.0 → 8.0 (10⁶/mL); Glc 25 → 12 mM; Gln 4 → 0.5 mM; Lac 2 → 18 mM. Result:
+
+| Metric | Computed | Benchmark | Verdict |
+|---|---|---|---|
+| μ | **0.0289 hr⁻¹** | 0.025–0.035 | ✓ in band |
+| Doubling time | **24.0 hr** | 22–28 | ✓ healthy CHO |
+| q_Glc | **1.287 mmol/10⁹/d** | 0.3–0.6 | ⚠ 2–4× elevated — substrate over-supply |
+| q_Gln | **0.347 mmol/10⁹/d** | 0.05–0.15 | ⚠ 2–7× elevated — same pattern |
+| q_Lac | **1.584 mmol/10⁹/d** | (yield-bound) | ⚠ tracking the high q_Glc |
+| **Y_Lac/Glc** | **1.23 mol/mol** | 1.0–1.8 | ✓ mixed, glycolysis-leaning, not yet Warburg |
+
+**Verdict on CHO-K1-mAb-v0.2: plausible v0-class baseline.** μ at 0.0289 is exactly where a healthy CHO-K1 culture should sit, and Y_Lac/Glc 1.23 is comfortably in band. The asparagine addition is on a sound platform basis (Gyorgypal 2025 reports asparagine-supplemented CHO trastuzumab cultures hitting comparable q_Glc/q_Gln) and improves the iCHOv1 mapping ratio to 90%. **Composition is not the limiter** — same conclusion as the v0 pass: this is a classic over-supplied batch signature driven by **delivery mode**, not formulation. If the run extended past 96h, Y_Lac/Glc would almost certainly climb past 1.5 (Warburg threshold) as glucose stays high.
+
+**Biggest risk: substrate over-supply driving runaway lactate** — *unchanged from v0*. Adding asparagine doesn't fix this; if anything, the extra N source can amplify the glutaminolysis-to-lactate flux. The answer is process (fed-batch glucose feed at ~5 mM setpoint), not composition. See the v0 → v0.1 entry for the lactate-reduction lever stack (Tier 1: glucose feed + Gln→Ala-Gln dipeptide + Cu²⁺; Tier 2: galactose, pyruvate uptake, Mn²⁺).
+
+**Confirming experiments (priority order).**
+
+1. **Asparagine drop-out arm**: v0.2 minus L-Asn vs. v0.2. Predicted: μ unchanged at 0.025–0.030, but q_Gln climbs ~20–40% as the line falls back on glutaminolysis for the missing N. Direct test of whether the Asn addition delivers the predicted N-sparing effect.
+2. **Fed-batch glucose feed** at 5 mM setpoint (same as v0 → v0.1 priority #1). Predicted: q_Glc → 0.4–0.6, Y_Lac/Glc → <1.0.
+3. **Ammonia time-course** — compute_metabolic_yields can return q_NH₃ but the synthetic input omitted it. NH₃ at every sample point is the highest-value missing data — Y_NH₃/Gln is the second-most-diagnostic ratio for CHO and tells you immediately whether the asparagine addition is doing its job.
+4. **mAb titer time-course** — q_P is the productivity readout that ultimately matters; missing entirely from this synthetic dataset.
+5. **Side-by-side v0 vs v0.2** — head-to-head on the same CHO-K1 line, same conditions. Isolates the asparagine effect from delivery-mode confounding.
+
+**Open follow-ups for this candidate.**
+
+- Re-map against iCHO2291 / iCHO2441 — likely closes the selenite gap. (Hand off to `hamster-metabolic-model`.)
+- L-Cystine vs. L-Cysteine mapping caveat — same as v0; resolve once with a model-side acylase / disulfide-reduction reaction or by switching to direct cysteine.
+- Pyruvate exchange `EX_pyr_e` LB still defaults to 0 in iCHOv1 — needs unblocking before any FBA pass that includes pyruvate as input.
+- The v0 → NAT swap (L-Tyrosine → N-Acetyl-L-Tyrosine) entry from earlier today still applies if supply-chain disruption hits Tyr; v0.2 inherits that swap option.
+
 

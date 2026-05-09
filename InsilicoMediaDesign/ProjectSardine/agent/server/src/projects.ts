@@ -40,10 +40,14 @@ export const CONFIG: AgentConfig = {
   },
   examplePrompts: [
     {
-      label:
-        "Design a CHO media and validate it end-to-end through iCHO",
+      label: "Open the live bench with a CHO-K1 starter media",
       prompt:
-        "Design a chemically-defined media for a CHO-K1 mAb-producing line, then validate it through the iCHO metabolic-model lens. (1) Compose ~10 components based on published recipes (search EuropePMC for Beefy-9 / BalanCD / academic CD-CHO formulations; cite at least two PMIDs). (2) Map each ingredient to its ChEBI ID and BiGG iCHOv1 exchange reaction; flag unmapped fraction. (3) Predict expected μ, q_Glc, q_Gln, Y_Lac/Glc with industry-benchmark citations. (4) Sanity-check using compute_metabolic_yields on synthetic data: t=24h VCD 1.0 ×10⁶/mL, glucose 25 mM, glutamine 4 mM, lactate 2 mM → t=96h VCD 8.0, glucose 12 mM, glutamine 0.5 mM, lactate 18 mM. (5) Verdict: good choice or not, biggest risk, what experiments would confirm. (6) Propose an edit to the Hamster notes.md §6 capturing the full pass.",
+        "Skip the literature search. Just call simulate_cho_media right now with sensible CHO-K1 mAb-platform defaults (glucose 25 mM, glutamine 4 mM, asparagine 5 mM, insulin 10 mg/L, IGF-1 20 ng/mL, selenium 30 nM, NaCl 117 mM, initial VCD 0.5 ×10^6/mL, 96 h horizon). Label it 'CHO-K1-starter'. After the bench renders, briefly tell me the predicted bottlenecks I'll see when I move sliders.",
+    },
+    {
+      label: "Design a CHO media + validate + open the live bench",
+      prompt:
+        "Design a chemically-defined media for a CHO-K1 mAb-producing line, validate it via iCHO, AND end with a simulate_cho_media call so the live dashboard appears inline. Steps: (1) Compose ~10 components grounded in published recipes (search EuropePMC, cite >=2 PMIDs). (2) Map ingredients to ChEBI IDs and iCHOv1 BiGG exchanges. (3) Predict expected mu, q_Glc, q_Gln, Y_Lac/Glc. (4) MUST call simulate_cho_media with the composition mapped to its 7 scalar inputs (glucose_mM, glutamine_mM, asparagine_mM, insulin_mg_L, igf1_ng_mL, selenium_nM, naCl_mM). Use defaults for any value you don't have specific data for. (5) After the bench is rendered, give the verdict and propose an edit to the Hamster notes.md.",
     },
     {
       label: "Compose a Media Zero for rainbow trout muscle cells",
@@ -53,12 +57,7 @@ export const CONFIG: AgentConfig = {
     {
       label: "Compute metabolic yields from a CHO time-course",
       prompt:
-        "I have a CHO bioreactor sample at t=24h: VCD 1.2 ×10⁶ cells/mL, glucose 12 mM, lactate 8 mM. At t=48h: VCD 2.4, glucose 7 mM, lactate 14 mM. Use compute_metabolic_yields to compute the rates and interpret in 3 sentences.",
-    },
-    {
-      label: "Summarize current state across both notes files",
-      prompt:
-        "Summarize the current state across both notes files (Sardine for composition, Hamster for validation). What's decided, what's blocking each, what's the highest-priority unblocker right now?",
+        "I have a CHO bioreactor sample at t=24h: VCD 1.2 x10^6 cells/mL, glucose 12 mM, lactate 8 mM. At t=48h: VCD 2.4, glucose 7 mM, lactate 14 mM. Use compute_metabolic_yields to compute the rates and interpret in 3 sentences.",
     },
   ],
 };

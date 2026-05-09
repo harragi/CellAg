@@ -81,7 +81,7 @@ body {
 
 .app {
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto 1fr;
   height: 100vh;
 }
 
@@ -193,6 +193,82 @@ body {
   color: var(--fg);
 }
 .btn-ghost:hover { background: var(--panel-soft); }
+
+/* ===== Progress strip ===== */
+
+.progress-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 22px;
+  background: linear-gradient(to right, rgba(184, 122, 26, 0.12), rgba(138, 51, 36, 0.06) 70%, transparent);
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  color: var(--fg);
+}
+.progress-strip .ps-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--warn);
+  box-shadow: 0 0 0 0 rgba(184, 122, 26, 0.6);
+  animation: ps-pulse 1.4s ease-in-out infinite;
+}
+@keyframes ps-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(184, 122, 26, 0.5); }
+  50%      { box-shadow: 0 0 0 6px rgba(184, 122, 26, 0); }
+}
+.progress-strip .ps-label {
+  color: var(--warn);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 11px;
+}
+.progress-strip .ps-sep { color: var(--muted-soft); }
+.progress-strip .ps-stat strong { color: var(--accent); font-weight: 700; }
+.progress-strip .ps-stat { color: var(--muted); }
+.progress-strip .ps-time { font-variant-numeric: tabular-nums; }
+.progress-strip .ps-current {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--fg);
+  background: white;
+  border: 1px solid var(--line);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.progress-strip .ps-current-badge {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  display: inline-grid;
+  place-items: center;
+  color: white;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.progress-strip .ps-current-name {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11px;
+}
+.progress-strip .ps-current-spinner {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--line);
+  border-top-color: var(--warn);
+  border-radius: 50%;
+  animation: ps-spin 0.8s linear infinite;
+  margin-left: 2px;
+}
+@keyframes ps-spin {
+  to { transform: rotate(360deg); }
+}
 
 /* ===== Steps rail ===== */
 
