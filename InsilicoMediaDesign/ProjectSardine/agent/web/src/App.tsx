@@ -3,6 +3,7 @@ import { Chat, type ChatHandle } from "./components/Chat.tsx";
 import { Header, type AgentStatus } from "./components/Header.tsx";
 import { StepsRail } from "./components/StepsRail.tsx";
 import type { ToolCall } from "./components/ToolCard.tsx";
+import type { BenchInit } from "./components/BenchCard.tsx";
 import { fetchAgentConfig, type AgentConfig, type NotesTarget } from "./lib/config.ts";
 
 export type ProposedEdit = {
@@ -14,9 +15,12 @@ export type ProposedEdit = {
   proposedAt: number;
 };
 
+export type BenchData = BenchInit;
+
 export function App() {
   const [config, setConfig] = useState<AgentConfig | null>(null);
   const [pendingEdits, setPendingEdits] = useState<ProposedEdit[]>([]);
+  const [benches, setBenches] = useState<BenchData[]>([]);
   const [toolCalls, setToolCalls] = useState<ToolCall[]>([]);
   const [status, setStatus] = useState<AgentStatus>("idle");
   const [model, setModel] = useState<string>("claude-opus-4-7");
@@ -36,6 +40,7 @@ export function App() {
     fetch("/api/reset", { method: "POST" }).catch(() => undefined);
     chatRef.current?.reset();
     setPendingEdits([]);
+    setBenches([]);
     setToolCalls([]);
     setStatus("idle");
   }
@@ -56,6 +61,7 @@ export function App() {
           examplePrompts={config?.examplePrompts ?? []}
           description={config?.description ?? ""}
           pendingEdits={pendingEdits}
+          benches={benches}
           toolCalls={toolCalls}
           onProposedEdit={(edit) => {
             setPendingEdits((prev) => [
@@ -65,6 +71,9 @@ export function App() {
           }}
           onResolveEdit={(editId) => {
             setPendingEdits((prev) => prev.filter((p) => p.id !== editId));
+          }}
+          onBenchInit={(b) => {
+            setBenches((prev) => [...prev.filter((p) => p.id !== b.id), b]);
           }}
           onToolCall={(call) => {
             setToolCalls((prev) => [...prev, call]);

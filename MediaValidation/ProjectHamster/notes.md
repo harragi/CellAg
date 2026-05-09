@@ -342,4 +342,84 @@ Unmapped fraction unchanged at 2/10 (ethanolamine, selenite). The NAT swap doesn
 - Re-check `EX_tyr__L_e` default bounds in iCHOv1 — if LB is set tightly, the FBA result will be insensitive to the swap.
 - caail bibliography has zero CHO-NAT entries; rely on EuropePMC for CHO-NAT validation papers (Schop 2015 PMID 26263045 and similar).
 
+<!-- agent-applied edit_1778346647439_3c3zng 2026-05-09 target="§6 Validation workflow — append dated entry: lactate-reduction adjustments to CHO-K1-mAb-v0 → v0.1" -->
+### [2026-05-09] Applied edit — §6 Validation workflow — append dated entry: lactate-reduction adjustments to CHO-K1-mAb-v0 → v0.1
+
+_Rationale: User reports too much lactate in CHO-K1-mAb-v0 — exactly the failure mode the prior 2026-05-09 sanity-check pass predicted ("classic over-supplied batch signature"). This entry captures the composition-side response: tiered lever list (glucose delivery + Gln swap + Cu as Tier 1; galactose substitution + pyruvate exchange unblocking + Mn as Tier 2; pH/temp shift as Tier 3 process levers), the v0 → v0.1 delta table, predicted readout improvements, the "good run" diagnostic (Y_Lac/Glc < 1.0 + late-phase lactate consumption), and follow-up experiments. Targets `hamster` because this is CHO validation — composition adjustments grounded in the Hamster validation framework. Cites three recent EuropePMC papers (Xu 2026 PMID 41978641, Kavoni 2025 PMID 40810344, Mahé 2022 PMID 34750672) and explicitly notes caail bibliography has zero CHO-lactate-control entries. Slots into §6 as a dated entry, consistent with the prior CHO-K1-mAb-v0 pass and the L-Tyr → NAT swap entry. Surfaces three concrete model-level follow-ups for `hamster-metabolic-model` (`EX_gal_e`, `EX_mn2_e`, `EX_pyr_e` LB) and an iCHO2291/iCHO2441 re-mapping task._
+
+### [2026-05-09] Composition adjustments to reduce lactate: CHO-K1-mAb-v0 → v0.1
+
+**Context.** User reports too much lactate in the CHO-K1-mAb-v0 run. This is the predicted failure mode from the 2026-05-09 sanity-check pass — that pass already flagged Y_Lac/Glc 1.23 with q_Glc 2–4× the healthy CHO band as a "classic over-supplied batch signature." The headline lever is substrate-delivery mode (fed-batch glucose feed), but there are real composition moves that compound the effect.
+
+**Mechanism.** CHO lactate overflow has two compositional drivers:
+1. Excess glycolytic flux — [Glc] above ~5 mM pushes pyruvate past PDH capacity → spillover via LDH to lactate
+2. Excess glutaminolysis — Gln → α-KG → malate → pyruvate → lactate via the malic enzyme bypass; large at Gln >2 mM with bolus delivery
+
+**Tier 1 — highest leverage:**
+
+| Lever | Change | Why |
+|---|---|---|
+| Glucose delivery | 25 mM bolus → 10–15 mM start + fed-batch maintaining [Glc] 3–5 mM | Y_Lac/Glc is dose-dependent on extracellular [Glc] above ~5 mM. Single biggest lever. |
+| L-Gln → L-Ala-L-Gln dipeptide | 4 mM Gln → 4 mM dipeptide (slow release) | Eliminates Gln spike → cuts lactate-from-Gln flux and q_NH₃ simultaneously |
+| Add CuSO₄ at 1 µM | (currently absent) | Cu²⁺ improves ETC coupling, shifts cells toward lactate consumption late-phase. Standard in ActiPro, BalanCD lineage. PMID 41978641 (Xu 2026) lists as canonical; PMID 40810344 (Kavoni 2025) ML review of metal-ion effects on CHO state. |
+
+**Tier 2 — secondary composition levers:**
+
+| Lever | Change | Why |
+|---|---|---|
+| Partial galactose substitution | Glc 10 mM + Gal 5 mM | Galactose enters glycolysis via Leloir pathway slower → throttles upstream flux |
+| Pyruvate exchange unblocked | iCHOv1 `EX_pyr_e` default LB=0 → set to allow uptake | Direct PDH entry bypasses glycolytic regulation. Watch: high [Pyr] can equilibrate to lactate via LDH. |
+| MnCl₂ at 0.5 µM | (currently absent) | Activates pyruvate carboxylase (anaplerotic OAA route, pulls pyruvate away from lactate). Bonus: glycosylation cofactor → mAb quality benefit. |
+
+**Tier 3 — process levers (out of composition scope but compound the effect):**
+- pH setpoint 6.9–7.0 (slows lactate efflux, induces earlier consumption switch)
+- Temperature shift 37 °C → 32 °C in production phase (day 4–5)
+- Late-phase Na-lactate boluses once cells switch to consumption mode
+
+**CHO-K1-mAb-v0.1 — composition deltas vs v0:**
+
+| # | Ingredient | v0 | v0.1 | Δ |
+|---|---|---|---|---|
+| 1 | D-Glucose | 25 mM bolus | 10 mM start + fed-batch at 3–5 mM setpoint | ↓↓ + delivery mode |
+| 1b | D-Galactose | — | 5 mM | NEW |
+| 2 | L-Glutamine | 4 mM | L-Ala-L-Gln dipeptide 4 mM | swap |
+| 3 | Sodium pyruvate | 1 mM | 1 mM (unchanged) — but unblock `EX_pyr_e` LB in iCHOv1 | model bound only |
+| 4 | N-Acetyl-L-Tyrosine | 0.5 mM | 0.5 mM | — (carryover from prior swap) |
+| 5–10 | Cystine, choline, hypoxanthine, ethanolamine, Fe-citrate, selenite | unchanged | unchanged | — |
+| 11 | CuSO₄ | — | 1 µM | NEW |
+| 12 | MnCl₂ | — | 0.5 µM | NEW |
+
+**Predicted readouts (v0.1 vs v0 sanity-check baseline):**
+
+| Readout | v0 sanity check | v0.1 predicted | Verdict |
+|---|---|---|---|
+| μ | 0.0289 hr⁻¹ | 0.025–0.030 hr⁻¹ | ~neutral |
+| q_Glc | 1.287 | 0.4–0.6 | normalized to healthy band |
+| q_Gln | 0.347 | 0.05–0.15 | normalized |
+| q_Lac | 1.584 | 0.3–0.6 initial; possibly negative late phase (consumption) | ↓↓ |
+| Y_Lac/Glc | 1.23 | 0.5–1.0 | well clear of Warburg threshold |
+| q_NH₃ | not measured | 0.5–1.0 mol/mol Gln | now in band |
+| q_P (mAb) | not measured | likely ↑ vs v0 (cleaner metabolic state) | upside |
+
+**Diagnostic to confirm.** If post-change Y_Lac/Glc < 1.0 AND q_Lac goes negative in late phase (lactate consumption switch), the metabolic shift happened. That is the "good run" signature for CHO-K1 mAb. If Y_Lac/Glc still >1.5, glucose feed setpoint is still too high — drop further.
+
+**Updated mapping notes for FBA (iCHOv1):**
+- `EX_glc__D_e` LB tracks new fed-batch flux (much smaller |LB|)
+- `EX_gal_e` — confirm presence in iCHOv1 (hand off to `hamster-metabolic-model`); if absent, route via galactokinase / GALT
+- `EX_cu2_e` — should be present (Cu²⁺ as cofactor for cytochrome c oxidase in iCHOv1)
+- `EX_mn2_e` — confirm presence
+- `EX_pyr_e` — flip default LB=0 → LB=-1 (or matched to formulation flux)
+- Cu/Mn additions don't change biomass directly but tighten ETC-coupled ATP yield; FBA should reflect lower lactate flux at the same μ
+
+**Confirming experiments (priority order).**
+1. Side-by-side: v0 (25 mM Glc bolus) vs v0.1 (fed-batch Glc + Cu + Gln-dipeptide). Measure VCD, Glc, Lac, Gln, NH₃, mAb at 24/48/72/96/120 h.
+2. Cu-only arm (v0 + 1 µM Cu) — isolates the Cu effect from the glucose-feed effect.
+3. Gln-dipeptide-only arm (v0 + dipeptide swap) — isolates the Gln effect.
+4. Drop-out: v0.1 minus Mn — confirms Mn anaplerotic contribution.
+
+**Open follow-ups.**
+- Confirm `EX_gal_e`, `EX_mn2_e` in iCHOv1 (route to `hamster-metabolic-model`).
+- Re-run iCHO2291 / iCHO2441 mapping with v0.1 — newer reconstructions have richer trace-element coverage.
+- caail bibliography: zero CHO lactate-control entries; relying on EuropePMC (PMID 41978641 Xu 2026, PMID 40810344 Kavoni 2025, PMID 34750672 Mahé 2022) and bioprocess canon.
+
 

@@ -51,6 +51,7 @@ You can call these custom tools. They are exposed under the \`mcp__science__\` n
 - **query_bigg** — BiGG Models REST. Generic endpoint wrapper. Use for novel paths the BiGG_* tools don't cover.
 - **query_chebi** — ChEBI compound lookup via EBI OLS. Generic search wrapper.
 - **compute_metabolic_yields** — Pure calculator. Two time-course points → μ, doubling time, q_X for each measured species, yield ratios. Y_Lac/Glc is the headline diagnostic.
+- **simulate_cho_media** — Render an interactive CHO media bench card inline in the chat. Call this AFTER you've designed or modified a CHO media so the user gets a live dashboard with sliders for the seven core components (glucose, glutamine, asparagine, insulin, IGF-1, selenium, NaCl) plus inoculum and time horizon. The card auto-runs Monod-style ODE simulation as the user moves sliders, plotting VCD, substrates, byproducts, and sensitivity. **Use this whenever a CHO media composition is in scope** — after a propose_notes_edit on the Hamster notes, after compose-then-validate flows, or when the user asks "what would happen if I changed X". Triage tool, NOT an FBA replacement.
 
 **ToolUniverse — curated 40-tool subset (mcp__tooluniverse__*):** prefer these over the generic wrappers above when one fits.
 

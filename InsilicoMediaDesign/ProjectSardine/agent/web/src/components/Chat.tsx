@@ -1,10 +1,11 @@
 import { useEffect, useImperativeHandle, useRef, useState, forwardRef } from "react";
-import type { ProposedEdit } from "../App.tsx";
+import type { BenchData, ProposedEdit } from "../App.tsx";
 import type { ExamplePrompt } from "../lib/config.ts";
 import { streamSse, type SseEvent } from "../lib/stream.ts";
 import { MarkdownView } from "./MarkdownView.tsx";
 import { ToolCard, type ToolCall } from "./ToolCard.tsx";
 import { ProposedEditCard } from "./ProposedEditCard.tsx";
+import { BenchCard } from "./BenchCard.tsx";
 import { Welcome } from "./Welcome.tsx";
 
 type ChatItem =
@@ -12,6 +13,7 @@ type ChatItem =
   | { kind: "assistant"; text: string; streaming: boolean }
   | { kind: "tool"; toolId: string }
   | { kind: "edit"; editId: string; resolution?: "applied" | "rejected" }
+  | { kind: "bench"; benchId: string }
   | { kind: "system"; text: string }
   | { kind: "error"; text: string };
 
@@ -24,9 +26,11 @@ type Props = {
   examplePrompts: ExamplePrompt[];
   description: string;
   pendingEdits: ProposedEdit[];
+  benches: BenchData[];
   toolCalls: ToolCall[];
   onProposedEdit: (e: ProposedEdit) => void;
   onResolveEdit: (editId: string) => void;
+  onBenchInit: (b: BenchData) => void;
   onToolCall: (call: ToolCall) => void;
   onToolResult: (id: string, result: string, isError: boolean) => void;
   onStatusChange: (status: "idle" | "running" | "error") => void;
@@ -37,9 +41,11 @@ export const Chat = forwardRef<ChatHandle, Props>(function Chat(
     examplePrompts,
     description,
     pendingEdits,
+    benches,
     toolCalls,
     onProposedEdit,
     onResolveEdit,
+    onBenchInit,
     onToolCall,
     onToolResult,
     onStatusChange,
@@ -73,7 +79,7 @@ export const Chat = forwardRef<ChatHandle, Props>(function Chat(
 
     try {
       await streamSse("/api/chat", { message: text }, (ev: SseEvent) => {
-        handleEvent(ev, setItems, onProposedEdit, onToolCall, onToolResult);
+        handleEvent(ev, setItems, onProposedEdit, onBenchInit, onToolCall, onToolResult);
       });
       onStatusChange("idle");
     } catch (err) {
@@ -136,8 +142,10 @@ export const Chat = forwardRef<ChatHandle, Props>(function Chat(
               item={it}
               toolCalls={toolCalls}
               pendingEdits={pendingEdits}
+              benches={benches}
               onApply={handleApply}
               onReject={handleReject}
+              onSendToChat={(t) => setInput(t)}
             />
           ))
         )}
@@ -176,14 +184,18 @@ function Item({
   item,
   toolCalls,
   pendingEdits,
+  benches,
   onApply,
   onReject,
+  onSendToChat,
 }: {
   item: ChatItem;
   toolCalls: ToolCall[];
   pendingEdits: ProposedEdit[];
+  benches: BenchData[];
   onApply: (id: string) => void;
   onReject: (id: string) => void;
+  onSendToChat: (text: string) => void;
 }) {
   if (item.kind === "user") return <div className="bubble user">{item.text}</div>;
   if (item.kind === "assistant") {
@@ -220,6 +232,11 @@ function Item({
       />
     );
   }
+  if (item.kind === "bench") {
+    const bench = benches.find((b) => b.id === item.benchId);
+    if (!bench) return <div className="system-line">bench {item.benchId} no longer available</div>;
+    return <BenchCard data={bench} onSendToChat={onSendToChat} />;
+  }
   if (item.kind === "system") return <div className="system-line">{item.text}</div>;
   return <div className="error-line">{item.text}</div>;
 }
@@ -228,6 +245,7 @@ function handleEvent(
   ev: SseEvent,
   setItems: React.Dispatch<React.SetStateAction<ChatItem[]>>,
   onProposedEdit: (e: ProposedEdit) => void,
+  onBenchInit: (b: BenchData) => void,
   onToolCall: (call: ToolCall) => void,
   onToolResult: (id: string, result: string, isError: boolean) => void
 ) {
@@ -235,6 +253,12 @@ function handleEvent(
     const edit = ev.data as ProposedEdit;
     onProposedEdit(edit);
     setItems((prev) => [...prev, { kind: "edit", editId: edit.id }]);
+    return;
+  }
+  if (ev.event === "bench_init") {
+    const bench = ev.data as BenchData;
+    onBenchInit(bench);
+    setItems((prev) => [...prev, { kind: "bench", benchId: bench.id }]);
     return;
   }
   if (ev.event === "system") return;
@@ -301,7 +325,7 @@ function appendAssistantText(
         next[i] = { ...it, text: it.text + delta };
         return next;
       }
-      if (it && (it.kind === "tool" || it.kind === "user" || it.kind === "edit")) {
+      if (it && (it.kind === "tool" || it.kind === "user" || it.kind === "edit" || it.kind === "bench")) {
         break;
       }
     }

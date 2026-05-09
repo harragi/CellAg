@@ -8,6 +8,7 @@ import { buildCaailTool } from "./caail.ts";
 import { buildBiggTool } from "./bigg.ts";
 import { buildChebiTool } from "./chebi.ts";
 import { buildYieldsTool } from "./yields.ts";
+import { buildSimulateTool } from "./simulate.ts";
 
 export type NotifyClient = (event: string, data: unknown) => void;
 
@@ -22,6 +23,7 @@ export function buildScienceMcpServer(notify: NotifyClient) {
     buildBiggTool(),
     buildChebiTool(),
     buildYieldsTool(),
+    buildSimulateTool(notify),
   ];
   return createSdkMcpServer({
     name: "science",
