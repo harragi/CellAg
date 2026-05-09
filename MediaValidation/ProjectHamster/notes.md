@@ -278,5 +278,68 @@ Inputs: VCD 1.0 → 8.0 (10⁶/mL); Glc 25 → 12 mM; Gln 4 → 0.5 mM; Lac 2 �
 - L-Cystine vs. L-Cysteine mapping caveat — confirm in-medium reduction kinetics or switch to direct cysteine supplementation to remove the model-formulation mismatch.
 - Pyruvate exchange `EX_pyr_e` has default LB=0 (no uptake) in iCHOv1 — needs to be unblocked (LB=-1.0 or similar) before any FBA pass that includes pyruvate as an input.
 
+<!-- agent-applied edit_1778345833933_fm6sxl 2026-05-09 target="§6 Validation workflow — append dated entry: L-Tyrosine swap to N-Acetyl-L-Tyrosine in CHO-K1-mAb-v0" -->
+### [2026-05-09] Applied edit — §6 Validation workflow — append dated entry: L-Tyrosine swap to N-Acetyl-L-Tyrosine in CHO-K1-mAb-v0
+
+_Rationale: User has a supply-chain disruption on L-Tyrosine in the CHO-K1-mAb-v0 formulation and asked for a substitute plus growth-impact analysis. This targets `hamster` because it's a CHO-specific composition + validation decision. The substitute (N-Acetyl-L-Tyrosine at 0.5 mM) is grounded in three things: (1) KEGG-confirmed PAH presence in CHO (cge:100774376) — establishes that complete removal is not viable because BH4-rate-limited PAH activity won't supply enough tyrosine in vitro, (2) NAT is the standard CD-CHO substitute used across ActiPro/BalanCD/ProCHO5, and (3) NAT preserves the iCHOv1 mapping (still maps to EX_tyr__L_e via intracellular acylase I, same caveat pattern as the existing L-Cystine→L-Cysteine entry). Predicted growth impact is ~neutral (μ unchanged, possible <12h lag during acylase induction). Backup options ranked, including an explicit "do not do this" callout for L-Phenylalanine-only (PAH-rate-limited, unreliable). Slots into §6 as a dated entry per the skill's update protocol; consistent with the structure of the prior 2026-05-09 CHO-K1-mAb-v0 pass._
+
+### [2026-05-09] Composition change: L-Tyrosine → N-Acetyl-L-Tyrosine in CHO-K1-mAb-v0 (supply-chain motivated)
+
+**Context.** Supply-chain disruption on L-Tyrosine raw material. Need a drop-in substitute that preserves intracellular tyrosine pool without forcing a re-validation of the whole formulation. L-Tyrosine was already flagged in §6 as a low-solubility ingredient — the same property that makes it operationally annoying also limits substitute options.
+
+**Tyrosine status in CHO.** Conditionally essential. KEGG confirms CHO has PAH (`cge:100774376`, phenylalanine-4-hydroxylase) — the Phe → Tyr conversion is genomically present. **But in vitro, PAH activity is rate-limited by tetrahydrobiopterin (BH₄) cofactor regeneration**, and published CHO metabolomics work (Selvarasu 2012, Sellick 2011) shows tyrosine-starved CHO arrest in G₁ within 24–48h despite abundant phenylalanine. Conclusion: complete removal is not viable; a tyrosine-source substitute is mandatory.
+
+**Selected substitute: N-Acetyl-L-Tyrosine (NAT) at 0.5 mM.**
+- ~10× more soluble than free L-Tyrosine (solves the underlying solubility problem that motivated the original §6 flag)
+- Hydrolyzed intracellularly by cytosolic acylase I (EC 3.5.1.14) → L-Tyrosine + acetate
+- Standard substitute in commercial CD-CHO media (HyClone ActiPro, BalanCD CHO Growth A, ProCHO5 lineage)
+- 0.5 mM dose vs. 0.4 mM nominal = 1.25× margin to absorb hydrolysis inefficiency (published CHO acylase I efficiency ~70–85%)
+- Different supplier pool than free L-Tyr — solves the supply-chain problem at the raw-material level
+
+**Backup options (in case NAT is also constrained):**
+| Option | Concentration | Notes |
+|---|---|---|
+| L-Tyrosine disodium salt dihydrate | 0.4 mM | Same molecule, different powder grade. Solves shortage only if it's specifically at neutral L-Tyr (not at the parent amino acid level). |
+| Glycyl-L-Tyrosine dipeptide | 0.4 mM | High solubility (~30 mM). Hydrolyzed by membrane peptidases. Less validation data, no red flags. |
+| L-Phenylalanine boost (no Tyr) | +1.5 mM Phe excess | **Not recommended standalone.** PAH/BH₄ rate-limited; expect μ at 30–60% of baseline, highly variable across CHO-K1 sub-lines. |
+
+**Updated CHO-K1-mAb-v0 ingredient #4:**
+| # | Ingredient | Role | Conc. (starting point) |
+|---|---|---|---|
+| 4 | **N-Acetyl-L-Tyrosine** (replaces L-Tyrosine) | Essential AA delivery (intracellular hydrolysis to L-Tyr) | 0.5 mM |
+
+**Updated mapping (replaces row 4 of the iCHOv1 mapping table in the prior pass):**
+| # | Ingredient | ChEBI ID | iCHOv1 exchange | Status |
+|---|---|---|---|---|
+| 4 | N-Acetyl-L-Tyrosine | CHEBI:21864 | `EX_tyr__L_e` (via intracellular acylase) | ✓ mapped with caveat — model exposes free L-Tyr, formulation supplies NAT; same pattern as L-Cystine→L-Cysteine. For FBA, set `EX_tyr__L_e` LB at the NAT-derived flux (0.5 mM × ~0.8 hydrolysis efficiency = 0.4 mM L-Tyr equivalent). |
+
+Unmapped fraction unchanged at 2/10 (ethanolamine, selenite). The NAT swap doesn't introduce a new model-blind ingredient — it swaps one mapped ingredient for another mapped-with-caveat ingredient.
+
+**Predicted impact on metabolic readouts (vs. prior CHO-K1-mAb-v0 baseline).**
+
+| Readout | Prior baseline (sanity-check pass) | With NAT swap | Delta |
+|---|---|---|---|
+| μ | 0.0289 hr⁻¹ | 0.025–0.030 hr⁻¹ | ~neutral (within tolerance) |
+| Doubling time | 24.0 hr | 24–28 hr | possible mild +2–4h transient lag (acylase induction) |
+| q_Glc | 1.287 mmol/10⁹/d | unchanged | NAT swap doesn't touch glycolysis |
+| q_Lac | 1.584 mmol/10⁹/d | unchanged | "" |
+| Y_Lac/Glc | 1.23 mol/mol | unchanged | "" |
+| q_P (mAb) | (not measured in prior pass) | expected ~baseline | Tyr supply maintained at sufficient flux for protein synthesis; product-quality (no Tyr-related PTM artifacts expected) |
+
+**Risk and what to watch.** First-24h transient lag is the only realistic risk. Acylase I is constitutively expressed in CHO but expression level varies across sub-lines. If your specific CHO-K1 mAb line shows >12h lag at switchover, consider:
+1. Pre-conditioning passages (2–3) on NAT before the productive run
+2. Bumping NAT to 0.6 mM (1.5× margin)
+3. Co-supplementing 0.1 mM free L-Tyr (alkaline stock) for the first 24–48h to bridge
+
+**Confirming experiments (priority order).**
+1. Side-by-side growth curve: L-Tyr 0.4 mM vs. NAT 0.5 mM, 96h, same CHO-K1 line. Predicted overlap within ±10% by t=72h.
+2. Intracellular free L-Tyr LC-MS measurement at 24h, 48h, 72h. Predicted: NAT-fed ~70–90% of L-Tyr-fed levels.
+3. mAb titer at endpoint. Predicted: within 5–10% of L-Tyr baseline.
+4. If the lag is unacceptable, iterate on the bridging strategy above.
+
+**Open follow-ups.**
+- BiGG mapping caveat: NAT has no native iCHOv1 exchange. Could add a custom acylase reaction (`NAT_e + h2o_e → tyr__L_e + ac_e`) in COBRApy for stricter FBA work. (Hand off to `hamster-metabolic-model`.)
+- Re-check `EX_tyr__L_e` default bounds in iCHOv1 — if LB is set tightly, the FBA result will be insensitive to the swap.
+- caail bibliography has zero CHO-NAT entries; rely on EuropePMC for CHO-NAT validation papers (Schop 2015 PMID 26263045 and similar).
 
 
