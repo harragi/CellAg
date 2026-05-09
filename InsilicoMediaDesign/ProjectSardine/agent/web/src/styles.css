@@ -30,6 +30,18 @@
   --t-notes-soft: #e6e4dd;
   --t-edit: #8a3324;        /* the change: brand */
   --t-edit-soft: #f3e7e1;
+  --t-bigg: #1f6f7a;        /* genome-scale models: teal */
+  --t-bigg-soft: #d6e9ec;
+  --t-chebi: #5d4a8a;       /* compounds: lavender */
+  --t-chebi-soft: #e6e0f1;
+  --t-yields: #a8324a;      /* compute: rose */
+  --t-yields-soft: #f4dde3;
+
+  /* Project palette */
+  --p-sardine: #8a3324;     /* fish, design — brand maroon */
+  --p-sardine-soft: #f3e7e1;
+  --p-hamster: #1f6f7a;     /* CHO, validation — teal */
+  --p-hamster-soft: #d6e9ec;
 
   /* Status */
   --ok: #2c7a3e;
@@ -81,17 +93,51 @@ body {
 .brand-mark {
   width: 32px; height: 32px;
   border-radius: 8px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+  background: linear-gradient(135deg, var(--p), var(--p-deep, #000));
   color: white;
   display: grid;
   place-items: center;
   font-weight: 700;
   font-size: 13px;
   letter-spacing: 0.06em;
+  transition: background 0.2s;
 }
 .brand-text h1 { margin: 0; font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
 .brand-text .subtitle { font-size: 11px; color: var(--muted); }
 .header-right { display: flex; align-items: center; gap: 10px; }
+
+.project-switcher {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.project-switcher select {
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: white;
+  cursor: pointer;
+  color: var(--fg);
+  font-weight: 600;
+}
+.project-switcher select:focus {
+  outline: 2px solid var(--p, var(--accent));
+  outline-offset: 1px;
+}
+.project-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--p-soft);
+  color: var(--p);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
 .model-badge {
   font-family: ui-monospace, Menlo, monospace;
   font-size: 11px;

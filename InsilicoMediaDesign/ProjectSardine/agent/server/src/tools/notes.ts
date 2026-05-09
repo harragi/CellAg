@@ -1,18 +1,20 @@
 import { readFile } from "node:fs/promises";
 import { z } from "zod";
 import { tool } from "@anthropic-ai/claude-agent-sdk";
-import { NOTES_PATH } from "../paths.ts";
+import { PROJECTS, type ProjectKey } from "../projects.ts";
 import { newEditId, state, type ProposedEdit } from "../state.ts";
 
 type NotifyClient = (event: string, data: unknown) => void;
 
-export function buildNotesTools(notify: NotifyClient) {
+export function buildNotesTools(projectKey: ProjectKey, notify: NotifyClient) {
+  const project = PROJECTS[projectKey];
+
   const readNotes = tool(
     "read_notes",
-    "Read the current contents of the canonical notes.md (the project's source of truth).",
+    "Read the current contents of the canonical notes.md (the project's source of truth) for the active project.",
     {},
     async () => {
-      const content = await readFile(NOTES_PATH, "utf-8");
+      const content = await readFile(project.notesPath, "utf-8");
       return {
         content: [{ type: "text" as const, text: content }],
       };
@@ -21,7 +23,7 @@ export function buildNotesTools(notify: NotifyClient) {
 
   const proposeNotesEdit = tool(
     "propose_notes_edit",
-    "Stage a section edit to notes.md for user review. The edit does NOT write to disk — the user sees a diff in the UI and clicks Apply or Reject. Provide a section identifier (e.g., '§10 Open scoping questions'), the proposed new content for that section, and a clear rationale.",
+    "Stage a section edit to notes.md for user review. The edit does NOT write to disk — the user sees a diff in the UI and clicks apply or reject. Provide a section identifier (e.g., '§10 Open scoping questions'), the proposed new content, and a clear rationale.",
     {
       section: z
         .string()
@@ -42,6 +44,7 @@ export function buildNotesTools(notify: NotifyClient) {
     async ({ section, new_content, rationale }) => {
       const edit: ProposedEdit = {
         id: newEditId(),
+        project: projectKey,
         section,
         newContent: new_content,
         rationale,
@@ -53,7 +56,7 @@ export function buildNotesTools(notify: NotifyClient) {
         content: [
           {
             type: "text" as const,
-            text: `Edit ${edit.id} staged for user review. Tell the user the diff is in the side panel and wait for their next message before assuming it was applied.`,
+            text: `Edit ${edit.id} staged for user review on project '${projectKey}'. Tell the user the diff is shown inline and wait for their next message before assuming it was applied.`,
           },
         ],
       };

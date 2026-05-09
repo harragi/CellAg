@@ -35,53 +35,66 @@ CellAg/
 ├── CLAUDE.md                       project conventions for Claude Code
 ├── README.md                       this file
 ├── .claude/skills/                 Claude Code skills (project-scoped)
-│   ├── project-sardine/            top-level router
+│   ├── project-sardine/            Sardine top-level router
 │   ├── sardine-start-with/         Media Zero (composition) driver
-│   └── sardine-thrive/             Media Thrive (measurement) driver
-└── InsilicoMediaDesign/
-    └── ProjectSardine/             our first project
-        ├── notes.md                canonical project state
-        ├── notes-*.png             whiteboard captures
-        ├── README.md               project overview
-        └── agent/                  runnable agent app
-            ├── server/             Bun + TypeScript + Claude Agent SDK
-            │   └── src/tools/      7 custom tools (KEGG, Ensembl, EuropePMC, arXiv, caail, notes r/w)
-            └── web/                React + Vite + react-markdown
-                └── src/components/ chat, steps rail, color-coded tool cards, propose-edit UI
+│   ├── sardine-thrive/             Media Thrive (measurement) driver
+│   ├── project-hamster/            Hamster top-level router
+│   ├── hamster-validate/           CHO validation loop driver
+│   └── hamster-metabolic-model/    iCHO genome-scale model drill-down
+├── InsilicoMediaDesign/            category: media composition
+│   └── ProjectSardine/
+│       ├── notes.md                canonical project state
+│       ├── notes-*.png             whiteboard captures
+│       ├── README.md               project overview
+│       └── agent/                  runnable multi-project agent app
+│           ├── server/             Bun + TypeScript + Claude Agent SDK
+│           │   └── src/tools/      10 custom tools
+│           └── web/                React + Vite + react-markdown
+│               └── src/components/ chat, steps rail, project switcher, propose-edit UI
+└── MediaValidation/                category: media validation (NEW)
+    └── ProjectHamster/             CHO validation effort
+        ├── notes.md                canonical state
+        └── README.md
 ```
 
-## What's Project Sardine
+## Two projects in flight
 
-Project Sardine is the first concrete project under `InsilicoMediaDesign`. The whiteboard split it into two halves:
+| | **Project Sardine** | **Project Hamster** |
+|---|---|---|
+| **Cell type** | Fish (rainbow trout target) | CHO (Chinese hamster ovary) |
+| **Question** | What's *in* a media that keeps cells alive? | Is this media *valid* against what the cell can metabolically do? |
+| **Method** | Composition design + system-knowledge-driven ingredient choice | GSM (iCHO family) + metabolic readouts (q_Glc, q_Lac, μ, Y_Lac/Glc) |
+| **Output** | A formulation | A validation report (predicted vs. measured, discrepancy modes) |
+| **Skills** | `project-sardine`, `sardine-start-with`, `sardine-thrive` | `project-hamster`, `hamster-validate`, `hamster-metabolic-model` |
+| **State** | `InsilicoMediaDesign/ProjectSardine/notes.md` | `MediaValidation/ProjectHamster/notes.md` |
 
-- **Media Zero (Start With)** — design a minimum-viable cell-culture media that enables cell *survival*. Composition / formulation work.
-- **Media Thrive (Thrive)** — design the metric stack that grades whether cells in a candidate media are *thriving*, not just alive. Measurement / evaluation work.
-
-Each half has its own [Claude Code skill](https://docs.claude.com/en/docs/claude-code/skills) under `.claude/skills/` and (currently for Start With only) its own runnable agent app under `agent/`.
-
-The agent treats `notes.md` as canonical project state. It reads the file on every turn, queries scientific databases via custom tools, and proposes section edits inline. **Nothing reaches disk without a click.**
+Each project has its own canonical `notes.md` and its own driver skill. The agent treats notes as the source of truth — reads on every turn, proposes section edits inline. **Nothing reaches disk without a click.**
 
 ## How the agent works
 
 ```
 Browser (React + Vite, port 5173)
-   │   POST /api/chat   { message }
+   │   POST /api/chat   { message, project: "sardine" | "hamster" }
    │   ◄ SSE stream of SDK message events
    ▼
 Bun + TypeScript server (port 3001)
    │   uses @anthropic-ai/claude-agent-sdk
-   │   query() loop with 7 custom tools (in-process MCP server)
+   │   query() loop with 10 custom tools (in-process MCP server)
+   │   project registry → per-project SKILL.md + notes.md
    ▼
 Custom tools
-   ├─ read_notes / propose_notes_edit  (filesystem: notes.md, propose-only)
-   ├─ query_kegg                       (rest.kegg.jp)
-   ├─ query_ensembl                    (rest.ensembl.org)
-   ├─ search_europepmc                 (ebi.ac.uk/europepmc)
-   ├─ arxiv_search                     (export.arxiv.org)
-   └─ search_caail                     (local grep over cloned tucca-cellag/caail)
+   ├─ read_notes / propose_notes_edit  (per-project notes.md, propose-only)
+   ├─ query_kegg                       (rest.kegg.jp)            metabolism
+   ├─ query_ensembl                    (rest.ensembl.org)        signaling
+   ├─ search_europepmc                 (ebi.ac.uk/europepmc)     literature
+   ├─ arxiv_search                     (export.arxiv.org)        preprints
+   ├─ search_caail                     (local clone)             cell-ag bibliography
+   ├─ query_bigg                       (bigg.ucsd.edu/api/v2)    iCHO genome-scale models
+   ├─ query_chebi                      (ebi.ac.uk/ols)           compound IDs
+   └─ compute_metabolic_yields         (pure calculator)          q_X, Y_Lac/Glc, μ, t_d
 ```
 
-The system prompt loads the `sardine-start-with` skill verbatim and inlines the current `notes.md` so the agent always sees current state without an extra tool round-trip.
+The system prompt for each turn loads the active project's driver SKILL.md verbatim and inlines its current `notes.md`, so the agent always sees current state without an extra tool round-trip. Switching projects in the UI swaps skills, notes, and conversation history independently.
 
 ## References
 

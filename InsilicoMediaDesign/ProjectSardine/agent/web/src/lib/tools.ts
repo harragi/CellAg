@@ -10,9 +10,12 @@ export type ToolKey =
   | "arxiv_search"
   | "search_caail"
   | "read_notes"
-  | "propose_notes_edit";
+  | "propose_notes_edit"
+  | "query_bigg"
+  | "query_chebi"
+  | "compute_metabolic_yields";
 
-export type ToolKind = "database" | "literature" | "state" | "edit";
+export type ToolKind = "database" | "literature" | "state" | "edit" | "model" | "compute";
 
 export type ToolMeta = {
   key: ToolKey;
@@ -27,7 +30,10 @@ export type ToolMeta = {
     | "arxiv"
     | "caail"
     | "notes"
-    | "edit";
+    | "edit"
+    | "bigg"
+    | "chebi"
+    | "yields";
   blurb: string;
 };
 
@@ -87,6 +93,30 @@ const META: Record<ToolKey, ToolMeta> = {
     kind: "edit",
     color: "edit",
     blurb: "stage notes.md change",
+  },
+  query_bigg: {
+    key: "query_bigg",
+    label: "BiGG",
+    short: "BG",
+    kind: "model",
+    color: "bigg",
+    blurb: "iCHO genome-scale models",
+  },
+  query_chebi: {
+    key: "query_chebi",
+    label: "ChEBI",
+    short: "CB",
+    kind: "database",
+    color: "chebi",
+    blurb: "compound IDs",
+  },
+  compute_metabolic_yields: {
+    key: "compute_metabolic_yields",
+    label: "yields",
+    short: "YL",
+    kind: "compute",
+    color: "yields",
+    blurb: "q_X & yield ratios",
   },
 };
 

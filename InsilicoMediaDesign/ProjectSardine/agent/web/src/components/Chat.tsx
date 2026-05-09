@@ -1,5 +1,6 @@
 import { useEffect, useImperativeHandle, useRef, useState, forwardRef } from "react";
 import type { ProposedEdit } from "../App.tsx";
+import type { Project } from "../lib/projects.ts";
 import { streamSse, type SseEvent } from "../lib/stream.ts";
 import { MarkdownView } from "./MarkdownView.tsx";
 import { ToolCard, type ToolCall } from "./ToolCard.tsx";
@@ -20,6 +21,7 @@ export type ChatHandle = {
 };
 
 type Props = {
+  project: Project | null;
   pendingEdits: ProposedEdit[];
   toolCalls: ToolCall[];
   onProposedEdit: (e: ProposedEdit) => void;
@@ -30,7 +32,16 @@ type Props = {
 };
 
 export const Chat = forwardRef<ChatHandle, Props>(function Chat(
-  { pendingEdits, toolCalls, onProposedEdit, onResolveEdit, onToolCall, onToolResult, onStatusChange },
+  {
+    project,
+    pendingEdits,
+    toolCalls,
+    onProposedEdit,
+    onResolveEdit,
+    onToolCall,
+    onToolResult,
+    onStatusChange,
+  },
   ref
 ) {
   const [items, setItems] = useState<ChatItem[]>([]);
@@ -48,7 +59,7 @@ export const Chat = forwardRef<ChatHandle, Props>(function Chat(
   }));
 
   async function sendMessage(text: string) {
-    if (!text.trim() || busy) return;
+    if (!text.trim() || busy || !project) return;
     setInput("");
     setBusy(true);
     onStatusChange("running");
@@ -59,9 +70,13 @@ export const Chat = forwardRef<ChatHandle, Props>(function Chat(
     ]);
 
     try {
-      await streamSse("/api/chat", { message: text }, (ev: SseEvent) => {
-        handleEvent(ev, setItems, onProposedEdit, onToolCall, onToolResult);
-      });
+      await streamSse(
+        "/api/chat",
+        { message: text, project: project.key },
+        (ev: SseEvent) => {
+          handleEvent(ev, setItems, onProposedEdit, onToolCall, onToolResult);
+        }
+      );
       onStatusChange("idle");
     } catch (err) {
       setItems((prev) => [
@@ -111,7 +126,7 @@ export const Chat = forwardRef<ChatHandle, Props>(function Chat(
     <div className="chat-pane">
       <div className="chat-list" ref={listRef}>
         {items.length === 0 ? (
-          <Welcome onPick={(prompt) => { setInput(prompt); }} />
+          <Welcome project={project} onPick={(prompt) => setInput(prompt)} />
         ) : (
           items.map((it, i) => (
             <Item
@@ -136,7 +151,11 @@ export const Chat = forwardRef<ChatHandle, Props>(function Chat(
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask the agent — try one of the suggested prompts above"
+              placeholder={
+                project
+                  ? `Ask the ${project.shortName} agent — try a suggested prompt above`
+                  : "Ask the agent…"
+              }
               onKeyDown={(e) => {
                 if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                   e.preventDefault();
@@ -172,7 +191,11 @@ function Item({
   if (item.kind === "assistant") {
     const cls = `bubble assistant${item.streaming ? " streaming" : ""}`;
     if (!item.text && item.streaming) {
-      return <div className={cls}><span style={{ color: "var(--muted)" }}>thinking…</span></div>;
+      return (
+        <div className={cls}>
+          <span style={{ color: "var(--muted)" }}>thinking…</span>
+        </div>
+      );
     }
     return (
       <div className={cls}>
@@ -203,7 +226,6 @@ function Item({
   return <div className="error-line">{item.text}</div>;
 }
 
-/** Decode SSE events into chat state + tool registry. */
 function handleEvent(
   ev: SseEvent,
   setItems: React.Dispatch<React.SetStateAction<ChatItem[]>>,
@@ -217,13 +239,7 @@ function handleEvent(
     setItems((prev) => [...prev, { kind: "edit", editId: edit.id }]);
     return;
   }
-  if (ev.event === "system") {
-    const data = ev.data as { kind?: string };
-    if (data.kind === "turn_start") {
-      // intentionally quiet — header dot communicates this now
-    }
-    return;
-  }
+  if (ev.event === "system") return;
   if (ev.event === "error") {
     const data = ev.data as { reason?: string };
     setItems((p) => [...p, { kind: "error", text: data.reason ?? "unknown" }]);

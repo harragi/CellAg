@@ -1,26 +1,31 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { buildSystemPrompt } from "./system-prompt.ts";
 import { buildScienceMcpServer, SCIENCE_TOOL_GLOB, type NotifyClient } from "./tools/index.ts";
-import { state } from "./state.ts";
+import { appendTurn } from "./state.ts";
+import type { ProjectKey } from "./projects.ts";
 
 const MODEL = process.env.AGENT_MODEL ?? "claude-opus-4-7";
 
 export type SsePush = (event: string, data: unknown) => void;
 
 /**
- * Run one turn of the agent: take a user message, push events to the SSE
- * stream as the SDK emits them, append assistant text to history, and resolve
- * when the agent's turn ends.
+ * Run one turn of the agent for a given project. Pushes SDK message events
+ * to the SSE stream as they arrive; appends assistant text to per-project
+ * history; resolves when the agent's turn ends.
  */
-export async function runAgentTurn(userMessage: string, push: SsePush): Promise<void> {
-  state.history.push({ role: "user", content: userMessage });
+export async function runAgentTurn(
+  projectKey: ProjectKey,
+  userMessage: string,
+  push: SsePush
+): Promise<void> {
+  appendTurn(projectKey, { role: "user", content: userMessage });
 
-  const systemPrompt = await buildSystemPrompt();
+  const systemPrompt = await buildSystemPrompt(projectKey);
 
   const notify: NotifyClient = (event, data) => push(event, data);
-  const science = buildScienceMcpServer(notify);
+  const science = buildScienceMcpServer(projectKey, notify);
 
-  push("system", { kind: "turn_start", model: MODEL });
+  push("system", { kind: "turn_start", model: MODEL, project: projectKey });
 
   let assistantText = "";
 
@@ -32,17 +37,12 @@ export async function runAgentTurn(userMessage: string, push: SsePush): Promise<
         systemPrompt,
         mcpServers: { science },
         allowedTools: [SCIENCE_TOOL_GLOB],
-        // permissionMode: "bypassPermissions" lets the tools we registered
-        // run without an interactive approval prompt — appropriate for a
-        // local single-user agent. If we ever multi-user, revisit.
         permissionMode: "bypassPermissions",
-        maxTurns: 12,
+        maxTurns: 16,
       },
     });
 
     for await (const message of iter) {
-      // Forward every SDK message verbatim to the client. The UI decides
-      // what to render. We extract assistant text for history persistence.
       push("message", message);
       const text = extractAssistantText(message);
       if (text) assistantText += text;
@@ -54,16 +54,11 @@ export async function runAgentTurn(userMessage: string, push: SsePush): Promise<
   }
 
   if (assistantText) {
-    state.history.push({ role: "assistant", content: assistantText });
+    appendTurn(projectKey, { role: "assistant", content: assistantText });
   }
   push("system", { kind: "turn_end" });
 }
 
-/**
- * Extract text content from an assistant SDK message.
- * The Agent SDK message shape is loosely typed across versions, so we walk
- * defensively rather than asserting.
- */
 function extractAssistantText(message: unknown): string | null {
   if (!message || typeof message !== "object") return null;
   const m = message as Record<string, unknown>;

@@ -23,17 +23,25 @@ CellAg/
 ├── .claude/skills/                 ← Claude Code skills (project-scoped)
 │   ├── project-sardine/            ← Sardine top-level router
 │   ├── sardine-start-with/         ← Media Zero (composition) driver
-│   └── sardine-thrive/             ← Media Thrive (measurement) driver
-└── InsilicoMediaDesign/            ← project: in-silico media design
-    └── ProjectSardine/
-        ├── notes.md                ← canonical project state
-        ├── notes-*.png             ← whiteboard captures
-        └── agent/                  ← runnable Claude Agent SDK app (Sardine Start-With)
-            ├── server/             ← Bun + TypeScript
-            └── web/                ← React + Vite
+│   ├── sardine-thrive/             ← Media Thrive (measurement) driver
+│   ├── project-hamster/            ← Hamster top-level router
+│   ├── hamster-validate/           ← CHO validation loop driver
+│   └── hamster-metabolic-model/    ← iCHO genome-scale model drill-down
+├── InsilicoMediaDesign/            ← category: media design (composition)
+│   └── ProjectSardine/
+│       ├── notes.md                ← canonical project state
+│       ├── notes-*.png             ← whiteboard captures
+│       └── agent/                  ← runnable multi-project agent app
+│           ├── server/             ← Bun + TypeScript + Claude Agent SDK
+│           └── web/                ← React + Vite + react-markdown
+└── MediaValidation/                ← category: media validation (measurement)
+    └── ProjectHamster/
+        └── notes.md                ← canonical project state
 ```
 
-Future projects under CellAg should follow the same shape: a project directory under a parent category (e.g., `InsilicoMediaDesign/`), a canonical `notes.md`, and project-scoped skills under `.claude/skills/`.
+The agent app under `ProjectSardine/agent/` is **multi-project** — it serves both Sardine and Hamster via a project-switcher in the UI. The server's project registry lives at `agent/server/src/projects.ts`; each project points at its own driver SKILL.md and notes.md.
+
+Future projects under CellAg should follow the same shape: a project directory under a parent category, a canonical `notes.md`, and project-scoped skills under `.claude/skills/`. Add the project to `agent/server/src/projects.ts` to make it accessible in the agent UI.
 
 ## Conventions
 
@@ -75,13 +83,21 @@ When agents or notes reference scientific work, cite by paper number from caail 
 
 ## Active skills
 
-Three Sardine skills currently live under `.claude/skills/`:
+Six skills under `.claude/skills/`, organized by project:
 
+**Sardine (fish + composition)**
 | Skill | Use when |
 |---|---|
-| `project-sardine` | The user mentions Project Sardine and you don't yet know which half. Routes to the sub-skills. |
+| `project-sardine` | User mentions Project Sardine and you don't yet know which half. Routes to sub-skills. |
 | `sardine-start-with` | Media composition / formulation work — basal media, growth factors, often-ignored factors. |
-| `sardine-thrive` | Measurement / evaluation work — RNA-Seq, doubling time, imaging-based health. |
+| `sardine-thrive` | Measurement / evaluation — RNA-Seq, doubling time, imaging. |
+
+**Hamster (CHO + validation)**
+| Skill | Use when |
+|---|---|
+| `project-hamster` | User mentions Project Hamster, CHO validation, or iCHO models without specifying a sub-area. |
+| `hamster-validate` | Full validation loop — ingredient mapping, q_X computation, predicted-vs-measured comparison. |
+| `hamster-metabolic-model` | Drill into iCHO genome-scale model details — reactions, metabolites, GPR, model selection. |
 
 When a user invokes one of these skills, follow it strictly — the skill is the operating manual for that workflow.
 
