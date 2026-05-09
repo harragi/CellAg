@@ -41,3 +41,6 @@ data/external/
 
 # Notebook checkpoints
 .ipynb_checkpoints/
+
+# ToolUniverse workspace cache (created by `tu` in cwd)
+.tooluniverse/

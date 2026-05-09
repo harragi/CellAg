@@ -109,6 +109,34 @@ The agent is grounded in the cell-ag-AI literature. The most directly relevant r
 
 The `search_caail` tool depends on a local clone of the caail bibliography for fast lookups. If the clone isn't present at `~/Code/tucca/caail`, the tool returns a polite "clone first" hint rather than failing.
 
+## Optional: ToolUniverse for ad-hoc database access
+
+[ToolUniverse](https://github.com/mims-harvard/ToolUniverse) (Harvard MIMS) wraps 2,000+ scientific databases (PubMed, UniProt, ChEMBL, FAERS, ClinicalTrials.gov, ENCODE, CELLxGENE, Reactome, OpenTargets, RCSB PDB, etc.) behind a unified CLI and MCP interface. This repo includes a project-scoped `.mcp.json` so Claude Code automatically picks ToolUniverse up when working in this workspace.
+
+To install:
+
+```bash
+# uv must be installed (https://docs.astral.sh/uv/)
+uv tool install tooluniverse
+tu status   # should show ~2200+ tools loaded
+
+# usage examples
+tu find 'cell culture media'                                  # search
+tu info PubMed_search_articles                                # tool details
+tu run PubMed_search_articles '{"query": "iCHO model"}'       # run a tool
+```
+
+The `.mcp.json` exposes ToolUniverse to Claude Code as an MCP server — when you open a Claude Code session at this workspace, you'll see ToolUniverse's tools available directly. For Claude Desktop or Cursor, mirror the config to their respective config files (see `tu-skills/skills/setup-tooluniverse/SKILL.md`).
+
+To unlock premium tools, set API keys in your shell:
+
+```bash
+export NCBI_API_KEY="…"     # https://account.ncbi.nlm.nih.gov/settings/
+export FDA_API_KEY="…"      # https://open.fda.gov/apis/authentication/
+```
+
+This is **not required** for the core CellAg agent app under `agent/` — that uses its own custom tools (KEGG, Ensembl, BiGG, etc.). ToolUniverse is a separate, complementary capability for broader scientific lookups.
+
 ## License
 
 MIT — see [LICENSE](./LICENSE).

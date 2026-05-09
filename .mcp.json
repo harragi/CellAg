@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "tooluniverse": {
+      "command": "uvx",
+      "args": ["tooluniverse"],
+      "env": {
+        "PYTHONIOENCODING": "utf-8"
+      }
+    }
+  }
+}
